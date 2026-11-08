@@ -1,0 +1,8 @@
+{
+  "name": "BangRoyBoost - TikTok & Shopee Product Booster",
+  "description": "Aplikasi turbo boost produk TikTok Shop dan Shopee dengan integrasi server, optimasi algoritma SEO, generator konten viral, dan scheduler otomatis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
