@@ -7,7 +7,7 @@ import { LiveBoostPipelineModal } from './components/LiveBoostPipelineModal';
 import { ServerNodesModal } from './components/ServerNodesModal';
 import { BoostHistoryTable } from './components/BoostHistoryTable';
 import { Footer } from './components/Footer';
-import { BoostAnalysisData, BoostHistoryItem, PlatformType, ServerNode } from './types';
+import { BoostAnalysisData, BoostHistoryItem, PlatformType, ServerNode, BumpingIntervalMinutes, ShopeeLiveServerConnection } from './types';
 import { ShoppingBag, Video, Clock, Zap, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const STORAGE_KEY = 'bangroyboost_history_v1';
@@ -16,9 +16,14 @@ export default function App() {
   const [url, setUrl] = useState('');
   const [detectedPlatform, setDetectedPlatform] = useState<PlatformType>('unknown');
   const [isLoading, setIsLoading] = useState(false);
+  const [bumpingInterval, setBumpingInterval] = useState<BumpingIntervalMinutes>(15);
   const [analysisData, setAnalysisData] = useState<BoostAnalysisData | null>(null);
   const [dispatchedInfo, setDispatchedInfo] = useState<{ handshakeId: string; nextBoostAt: string } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Live direct connection to https://shopee.co.id & rotating proxy pool state
+  const [shopeeConnection, setShopeeConnection] = useState<ShopeeLiveServerConnection | null>(null);
+  const [isRotatingProxy, setIsRotatingProxy] = useState(false);
 
   // Modals
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
@@ -62,7 +67,20 @@ export default function App() {
     }
   }, [url]);
 
-  // Fetch server status on mount
+  // Fetch server status & direct connection to https://shopee.co.id
+  const fetchShopeeStatus = async () => {
+    try {
+      const res = await fetch('/api/shopee/live-status');
+      const json = await res.json();
+      if (json.success && json.data) {
+        setShopeeConnection(json.data);
+        setServerPing(json.data.latencyMs);
+      }
+    } catch (e) {
+      console.warn('Shopee live status fetch failed:', e);
+    }
+  };
+
   const fetchServers = async () => {
     try {
       setIsRefreshingServers(true);
@@ -73,6 +91,9 @@ export default function App() {
         const fastest = Math.min(...data.servers.map((s: ServerNode) => s.latencyMs));
         setServerPing(fastest);
       }
+      if (data.activeProxy && !shopeeConnection) {
+        fetchShopeeStatus();
+      }
     } catch (err) {
       console.warn('Failed to fetch servers, using defaults:', err);
     } finally {
@@ -80,8 +101,33 @@ export default function App() {
     }
   };
 
+  // Rotate proxy immediately and test connection to https://shopee.co.id
+  const handleRotateProxy = async () => {
+    try {
+      setIsRotatingProxy(true);
+      const res = await fetch('/api/proxy/rotate', { method: 'POST' });
+      const json = await res.json();
+      if (json.success && json.liveConnection) {
+        setShopeeConnection(json.liveConnection);
+        setServerPing(json.liveConnection.latencyMs);
+      }
+    } catch (err) {
+      console.error('Rotate proxy error:', err);
+    } finally {
+      setIsRotatingProxy(false);
+    }
+  };
+
+  // Immediate connection on mount & periodic 30s heartbeat
   useEffect(() => {
+    fetchShopeeStatus();
     fetchServers();
+
+    const interval = setInterval(() => {
+      fetchShopeeStatus();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Save history on change
@@ -103,14 +149,14 @@ export default function App() {
     }
   };
 
-  // Handle URL analyze
   // Handle URL analyze & automatic server boosting
-  const handleAnalyze = async (overrideUrl?: string, customCategory?: string, targetAudience?: string) => {
+  const handleAnalyze = async (overrideUrl?: string, customCategory?: string, targetAudience?: string, overrideInterval?: BumpingIntervalMinutes) => {
     const targetUrl = (overrideUrl || url).trim();
     if (!targetUrl) return;
     if (overrideUrl && overrideUrl !== url) {
       setUrl(overrideUrl);
     }
+    const intervalToUse = overrideInterval || bumpingInterval;
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -122,6 +168,7 @@ export default function App() {
           url: targetUrl,
           customCategory,
           targetAudience,
+          bumpingInterval: intervalToUse,
         }),
       });
 
@@ -136,7 +183,7 @@ export default function App() {
       // Auto-connect direct server handshake & top search placement
       const activePlatform = (detectedPlatform === 'unknown' ? productData.platform : detectedPlatform) || productData.platform;
       const handshakeId = productData.searchSimulation?.handshakeId || 'SYN-' + Math.random().toString(36).substring(2, 9).toUpperCase();
-      const nextBoostAt = productData.searchSimulation?.autoRenewNext || '15 Menit Kemudian';
+      const nextBoostAt = productData.searchSimulation?.autoRenewNext || 'Terjadwal Otomatis';
 
       setDispatchedInfo({ handshakeId, nextBoostAt });
 
@@ -238,6 +285,10 @@ export default function App() {
       <Header
         activeTab={activeTab}
         onSelectTab={setActiveTab}
+        shopeeConnection={shopeeConnection}
+        onOpenServerModal={() => setIsServerModalOpen(true)}
+        onRotateProxy={handleRotateProxy}
+        isRotatingProxy={isRotatingProxy}
       />
 
       <main className="flex-1">
@@ -248,6 +299,12 @@ export default function App() {
           onAnalyze={handleAnalyze}
           isLoading={isLoading}
           detectedPlatform={detectedPlatform}
+          bumpingInterval={bumpingInterval}
+          setBumpingInterval={setBumpingInterval}
+          shopeeConnection={shopeeConnection}
+          onOpenServerModal={() => setIsServerModalOpen(true)}
+          onRotateProxy={handleRotateProxy}
+          isRotatingProxy={isRotatingProxy}
         />
 
         {/* Error notification */}
@@ -272,6 +329,7 @@ export default function App() {
                     <TopSearchPlacementView
                       data={analysisData}
                       platform={detectedPlatform === 'unknown' ? analysisData.platform : detectedPlatform}
+                      bumpingInterval={bumpingInterval}
                       onOpenBoostModal={() => setIsBoostModalOpen(true)}
                     />
                   </div>
@@ -306,7 +364,7 @@ export default function App() {
                     <span className="text-slate-700">·</span>
                     <span className="flex items-center gap-1.5 text-amber-400">
                       <Clock className="h-3.5 w-3.5" />
-                      Auto-Bumping 15 Menit Sekali
+                      Auto-Bumping Server Aktif
                     </span>
                     <span className="text-slate-700">·</span>
                     <span className="flex items-center gap-1.5 text-emerald-400">
@@ -319,28 +377,28 @@ export default function App() {
             </div>
           )}
 
-          {/* Auto-Bumping 15M Tab */}
+          {/* Auto-Bumping Tab */}
           {activeTab === 'shopee4h' && (
             <div className="space-y-6">
               <div className="rounded-2xl border border-orange-500/30 bg-slate-900/80 p-6 sm:p-8 space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2 text-orange-400 font-bold text-lg">
                     <ShoppingBag className="h-6 w-6" />
-                    <h2>Siklus Bumping Otomatis Server 15 Menit Sekali (Shopee SGW)</h2>
+                    <h2>Siklus Bumping Otomatis Server (Shopee SGW)</h2>
                   </div>
                   <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-950/80 border border-emerald-600/60 text-emerald-300">
-                    Siklus: 15 Menit Sekali (Aktif)
+                    Siklus Auto-Bumping Aktif
                   </span>
                 </div>
                 <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
-                  Sistem BangRoyBoost menghubungkan produk Anda langsung ke server Shopee SGW Gateway secara berkala setiap <strong>15 menit sekali</strong>. Algoritma melakukan re-index pencarian otomatis, menjaga produk tetap berada di urutan teratas katalog, dan memastikan produk selalu segar di hadapan calon pembeli aktif.
+                  Sistem BangRoyBoost menghubungkan produk Anda langsung ke server Shopee SGW Gateway secara berkala. Algoritma melakukan re-index pencarian otomatis, menjaga produk tetap berada di urutan teratas katalog, dan memastikan produk selalu segar di hadapan calon pembeli aktif.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                    <span className="text-xs font-mono text-emerald-400 font-bold">Frekuensi 15 Menit</span>
+                    <span className="text-xs font-mono text-emerald-400 font-bold">Frekuensi Berkala</span>
                     <h4 className="text-sm font-semibold text-white">Re-Index Otomatis</h4>
-                    <p className="text-xs text-slate-400">Pembaruan token handshake tiap 15 menit menjaga produk tetap diprioritaskan algoritma.</p>
+                    <p className="text-xs text-slate-400">Pembaruan token handshake berkala menjaga produk tetap diprioritaskan algoritma.</p>
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
                     <span className="text-xs font-mono text-orange-400 font-bold">Shopee SGW Gateway</span>
@@ -361,7 +419,7 @@ export default function App() {
 
                 <div className="border-t border-slate-800/80 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <span className="text-xs text-slate-400">
-                    Sistem BangRoyBoost berjalan otomatis di latar belakang tanpa Anda harus membuka atau memencet tombol apa pun setiap 15 menit.
+                    Sistem BangRoyBoost berjalan otomatis di latar belakang tanpa Anda harus membuka atau memencet tombol apa pun.
                   </span>
                   <button
                     onClick={() => {
@@ -478,6 +536,9 @@ export default function App() {
         servers={servers}
         onRefresh={fetchServers}
         isRefreshing={isRefreshingServers}
+        shopeeConnection={shopeeConnection}
+        onRotateProxy={handleRotateProxy}
+        isRotatingProxy={isRotatingProxy}
       />
     </div>
   );

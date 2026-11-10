@@ -469,7 +469,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
               <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-[11px] text-slate-400">
                 <span className="text-emerald-400 font-medium flex items-center gap-1">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Turbo Bumping 15 Menit di Server Shopee
+                  Auto-Bumping Aktif di Server Shopee
                 </span>
                 <span className="font-mono text-orange-400">
                   Bumping Ulang: {formatCountdown(countdownSeconds)}

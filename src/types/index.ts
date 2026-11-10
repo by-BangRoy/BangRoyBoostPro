@@ -120,6 +120,37 @@ export interface ServerNode {
   quotaRemaining: string;
 }
 
+export interface RotatingProxyNode {
+  id: string;
+  ip: string;
+  port: number;
+  location: string;
+  provider: string;
+  protocol: string;
+  latencyMs: number;
+  status: 'active' | 'standby' | 'rotating';
+  requestsRouted: number;
+  successRate: string;
+  lastRotatedAt: string;
+}
+
+export interface ShopeeLiveServerConnection {
+  target: string;
+  connected: boolean;
+  httpStatus: number;
+  serverNode: string;
+  serverHeader: string;
+  latencyMs: number;
+  handshakeId: string;
+  timestamp: string;
+  activeProxy: RotatingProxyNode;
+  proxyPool: RotatingProxyNode[];
+  rotationIntervalSeconds: number;
+  totalRotations: number;
+  wafBypassActive: boolean;
+  rateLimitRemaining: string;
+}
+
 export interface BoostHistoryItem {
   id: string;
   productName: string;

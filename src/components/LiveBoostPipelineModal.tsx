@@ -14,7 +14,7 @@ interface LiveBoostPipelineModalProps {
 const STAGES = [
   { id: 1, label: 'Handshake Gateway Server', detail: 'Menghubungkan ke API Partner Shopee SGW Gateway...' },
   { id: 2, label: 'Injeksi Algoritma Search & Tagging', detail: 'Mengirimkan payload formula kata kunci ber-ranking tinggi...' },
-  { id: 3, label: 'Aktivasi Slot 15 Menit Sekali (Otomatis)', detail: 'Mendaftarkan item ke antrean auto-bumping 15 menit Shopee...' },
+  { id: 3, label: 'Aktivasi Slot Auto-Bumping', detail: 'Mendaftarkan item ke antrean auto-bumping server Shopee SGW...' },
   { id: 4, label: 'Sinkronisasi Server Selesai', detail: 'Produk berhasil di-boost dan terdaftar di server Shopee.' },
 ];
 
@@ -66,11 +66,11 @@ export const LiveBoostPipelineModal: React.FC<LiveBoostPipelineModalProps> = ({
         const resData = await res.json();
         if (isCancelled) return;
         setHandshakeId(resData.serverHandshakeId || 'SYN-' + Math.floor(100000 + Math.random() * 900000));
-        setNextBoostAt(resData.nextBoostTime || '15 Menit Kemudian');
+        setNextBoostAt(resData.nextBoostTime || 'Terjadwal Otomatis');
       } catch {
         if (isCancelled) return;
         setHandshakeId('SYN-' + Math.floor(100000 + Math.random() * 900000));
-        setNextBoostAt('15 Menit Kemudian');
+        setNextBoostAt('Terjadwal Otomatis');
       }
 
       // Stage 3
@@ -203,7 +203,7 @@ export const LiveBoostPipelineModal: React.FC<LiveBoostPipelineModalProps> = ({
                   onChange={(e) => setAutoSchedule(e.target.checked)}
                   className="rounded border-slate-700 bg-slate-900 text-orange-500 focus:ring-0"
                 />
-                <span>Aktifkan auto-bumping otomatis setiap 15 menit sekali</span>
+                <span>Aktifkan siklus auto-bumping otomatis di background server</span>
               </label>
             </div>
           </div>

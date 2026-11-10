@@ -399,7 +399,7 @@ ${data.recommendedHashtags.join(' ')}
           }`}
         >
           <Clock className="h-3.5 w-3.5 text-amber-400" />
-          <span>Turbo Bumping 15M</span>
+          <span>Auto-Bumping Shopee</span>
         </button>
 
         <button
@@ -774,22 +774,22 @@ ${data.recommendedHashtags.join(' ')}
         </div>
       )}
 
-      {/* Tab 4: Turbo Bumping 15M */}
+      {/* Tab 4: Auto-Bumping Shopee */}
       {activeSubTab === 'shopee' && (
         <div className="space-y-4">
           <div className="rounded-xl border border-orange-500/30 bg-orange-950/10 p-5 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-orange-400 font-bold text-base">
                 <ShoppingBag className="h-5 w-5" />
-                <span>Fitur Naikkan Produk Otomatis (Turbo Bumping 15 Menit Sekali)</span>
+                <span>Fitur Naikkan Produk Otomatis (Auto-Bumping Shopee)</span>
               </div>
               <span className="font-mono text-xs text-emerald-400 bg-emerald-950/40 border border-emerald-800/60 px-2 py-0.5 rounded">
-                Siklus 15 Menit Aktif
+                Siklus Auto-Bumping Aktif
               </span>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Sistem BangRoyBoost secara berkala setiap <strong>15 menit sekali</strong> otomatis terkoneksi dan mengirimkan sinyal boost ke server Shopee SGW Gateway. Penjadwalan berulang ini menjaga produk Anda terus diprioritaskan di posisi teratas halaman pencarian pembeli tanpa jeda.
+              Sistem BangRoyBoost secara berkala otomatis terkoneksi dan mengirimkan sinyal boost ke server Shopee SGW Gateway. Penjadwalan berulang ini menjaga produk Anda terus diprioritaskan di posisi teratas halaman pencarian pembeli tanpa jeda.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">

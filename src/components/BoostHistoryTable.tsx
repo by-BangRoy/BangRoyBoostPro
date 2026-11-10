@@ -41,7 +41,7 @@ export const BoostHistoryTable: React.FC<BoostHistoryTableProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Daftar produk Shopee dengan sinyal indexing aktif dan slot bumping 15 menit otomatis.
+            Daftar produk Shopee dengan sinyal indexing aktif dan slot auto-bumping server otomatis.
           </p>
         </div>
 
