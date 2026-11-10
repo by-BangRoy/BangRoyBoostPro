@@ -187,17 +187,19 @@ export default function App() {
 
       setDispatchedInfo({ handshakeId, nextBoostAt });
 
-      // Automatically dispatch background 15-minute bumping cycle to live server
+      // Automatically dispatch background bumping cycle to live server
       try {
         fetch('/api/boost/dispatch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            productUrl: targetUrl,
             url: targetUrl,
             platform: activePlatform,
+            intervalMinutes: intervalToUse,
             autoSchedule: true,
           }),
-        }).catch((e) => console.warn('Background dispatch sync error:', e));
+        }).catch(() => {});
       } catch {}
 
       // Automatically register to boost history
@@ -330,6 +332,7 @@ export default function App() {
                       data={analysisData}
                       platform={detectedPlatform === 'unknown' ? analysisData.platform : detectedPlatform}
                       bumpingInterval={bumpingInterval}
+                      onIntervalChange={setBumpingInterval}
                       onOpenBoostModal={() => setIsBoostModalOpen(true)}
                     />
                   </div>

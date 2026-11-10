@@ -10,8 +10,8 @@ export async function safeCopy(text: string): Promise<boolean> {
       await navigator.clipboard.writeText(text);
       return true;
     }
-  } catch (err) {
-    console.warn('Modern navigator.clipboard.writeText failed, using textarea fallback', err);
+  } catch {
+    // Fall back quietly to textarea method in sandboxed iframe
   }
 
   // 2. Fallback to execCommand('copy') via temporary textarea
@@ -28,8 +28,7 @@ export async function safeCopy(text: string): Promise<boolean> {
     const successful = document.execCommand('copy');
     document.body.removeChild(textArea);
     return successful;
-  } catch (err) {
-    console.error('All copy strategies failed', err);
+  } catch {
     return false;
   }
 }

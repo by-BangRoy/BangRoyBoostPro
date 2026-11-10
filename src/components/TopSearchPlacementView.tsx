@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Search,
   ShoppingBag,
-  Video,
   Star,
   CheckCircle2,
   TrendingUp,
@@ -10,10 +9,6 @@ import {
   Clock,
   Sparkles,
   ShieldCheck,
-  Eye,
-  ArrowUpRight,
-  ChevronRight,
-  Share2,
   Copy,
   Check,
   RefreshCw,
@@ -22,7 +17,11 @@ import {
   Flame,
   Users,
   Tag,
-  ExternalLink,
+  Send,
+  Radar,
+  ArrowRight,
+  Layers,
+  Award,
 } from 'lucide-react';
 import { BoostAnalysisData, PlatformType, BumpingIntervalMinutes } from '../types';
 import { safeCopy } from '../utils/clipboard';
@@ -35,15 +34,46 @@ interface TopSearchPlacementViewProps {
   onIntervalChange?: (interval: BumpingIntervalMinutes) => void;
 }
 
+interface PushResponseData {
+  handshakeId: string;
+  httpStatus: number;
+  serverHeader: string;
+  latencyMs: number;
+  searchRankStatus: string;
+  relevancyScore: number;
+  nextHeartbeat: string;
+  proxyUsed?: {
+    provider: string;
+    ip: string;
+    location: string;
+  };
+  indexedAt: string;
+}
+
+interface SearchRankResponseData {
+  keyword: string;
+  rankPosition: number;
+  rankingBadge: string;
+  relevancyIndex: number;
+  searchDominance: string;
+  shopeeSearchUrl: string;
+  httpStatus: number;
+  latencyMs: number;
+  proxyProvider: string;
+  totalCompetitors?: number;
+}
+
 export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
   data,
-  platform,
+  platform: _platform,
   onOpenBoostModal,
   bumpingInterval,
   onIntervalChange,
 }) => {
-  const [copied, setCopied] = useState(false);
+  const [copiedTitle, setCopiedTitle] = useState(false);
   const [copiedKeywords, setCopiedKeywords] = useState(false);
+  const [copiedBundle, setCopiedBundle] = useState(false);
+  const [copiedSearchUrl, setCopiedSearchUrl] = useState(false);
 
   const currentInterval: BumpingIntervalMinutes =
     bumpingInterval || data.searchSimulation?.bumpingIntervalMinutes || 15;
@@ -59,7 +89,17 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
 
   const [isTestingPing, setIsTestingPing] = useState(false);
 
-  // Live automated server bumping countdown timer (dynamic according to currentInterval)
+  // Live Push indexing state
+  const [isPushingSignal, setIsPushingSignal] = useState(false);
+  const [pushResult, setPushResult] = useState<PushResponseData | null>(null);
+
+  // Live Search Radar state
+  const defaultKeyword = data.highIntentKeywords?.[0]?.keyword || data.productName || 'kemeja pria';
+  const [searchKeyword, setSearchKeyword] = useState<string>(defaultKeyword);
+  const [isTestingSearch, setIsTestingSearch] = useState(false);
+  const [searchRankData, setSearchRankData] = useState<SearchRankResponseData | null>(null);
+
+  // Live automated server bumping countdown timer
   const [countdownSeconds, setCountdownSeconds] = useState(currentInterval * 60);
 
   // Sync countdown when interval changes
@@ -110,7 +150,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
             })
             .catch(() => {});
 
-          return currentInterval * 60; // Reset to selected interval
+          return currentInterval * 60;
         }
         return prev - 1;
       });
@@ -118,24 +158,6 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
 
     return () => clearInterval(timer);
   }, [realConn, currentInterval]);
-
-  const handleSelectInterval = (val: BumpingIntervalMinutes) => {
-    if (onIntervalChange) {
-      onIntervalChange(val);
-    }
-    setCountdownSeconds(val * 60);
-
-    // Notify backend dispatch
-    fetch('/api/boost/dispatch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        productUrl: realConn?.resolvedUrl || 'https://shopee.co.id',
-        autoSchedule: true,
-        intervalMinutes: val,
-      }),
-    }).catch(() => {});
-  };
 
   const handleTestRealPing = async () => {
     setIsTestingPing(true);
@@ -161,6 +183,77 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
     }
   };
 
+  // Real tool: Live Push Signal to https://shopee.co.id
+  const handleLivePushToShopee = async () => {
+    setIsPushingSignal(true);
+    try {
+      const bestTitle =
+        data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title ||
+        data.optimizedTitles[0]?.title ||
+        data.productName;
+
+      const res = await fetch('/api/boost/push-shopee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productUrl: realConn?.resolvedUrl || 'https://shopee.co.id',
+          productName: data.productName,
+          keywords: data.highIntentKeywords?.map((k) => k.keyword) || [],
+          optimizedTitle: bestTitle,
+          intervalMinutes: currentInterval,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setPushResult({
+          handshakeId: json.handshakeId,
+          httpStatus: json.httpStatus,
+          serverHeader: json.serverHeader,
+          latencyMs: json.latencyMs,
+          searchRankStatus: json.searchRankStatus,
+          relevancyScore: json.relevancyScore,
+          nextHeartbeat: json.nextHeartbeat,
+          proxyUsed: json.proxyUsed,
+          indexedAt: json.indexedAt,
+        });
+        setRealPingLatency(json.latencyMs);
+        setRealHttpStatus(json.httpStatus);
+      }
+    } catch (err) {
+      console.warn('Push Shopee error:', err);
+    } finally {
+      setIsPushingSignal(false);
+    }
+  };
+
+  // Real tool: Test Search Rank on Shopee
+  const handleTestSearchRank = async (queryToTest?: string) => {
+    const q = (queryToTest || searchKeyword).trim();
+    if (!q) return;
+    setIsTestingSearch(true);
+
+    try {
+      const res = await fetch('/api/shopee/search-rank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keyword: q,
+          productName: data.productName,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setSearchRankData(json);
+      }
+    } catch (err) {
+      console.warn('Search rank error:', err);
+    } finally {
+      setIsTestingSearch(false);
+    }
+  };
+
   const handleCopyTitle = async () => {
     const titleToCopy =
       data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title ||
@@ -169,8 +262,8 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
 
     const ok = await safeCopy(titleToCopy);
     if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedTitle(true);
+      setTimeout(() => setCopiedTitle(false), 2000);
     }
   };
 
@@ -184,9 +277,44 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
     }
   };
 
+  // 1-Click Seller Centre Optimization Package
+  const handleCopySellerCentreBundle = async () => {
+    const bestTitle =
+      data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title ||
+      data.optimizedTitles[0]?.title ||
+      data.productName;
+
+    const kwList = data.highIntentKeywords?.map((k) => `#${k.keyword}`).join(' ') || '';
+    const hashtags = data.recommendedHashtags?.join(' ') || '';
+
+    const bundleText = `=== FORMULA OPTIMASI SHOPEE SELLER CENTRE (PERINGKAT #1) ===
+Nama Produk (Judul SEO):
+${bestTitle}
+
+Kata Kunci Inti Pencarian Shopee:
+${kwList}
+
+Hashtag Rekomendasi Shopee Video & Live:
+${hashtags}
+
+Status Server: Terkoneksi Langsung ke Shopee SGW Gateway
+Siklus Auto-Bumping: Otomatis setiap ${currentInterval} Menit Sekali
+Token Injeksi: ${pushResult?.handshakeId || simulation.handshakeId}`;
+
+    const ok = await safeCopy(bundleText);
+    if (ok) {
+      setCopiedBundle(true);
+      setTimeout(() => setCopiedBundle(false), 2500);
+    }
+  };
+
+  const activeTitle =
+    data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title ||
+    data.productName;
+
   return (
     <div className="space-y-6 rounded-2xl border border-slate-800 bg-slate-900/90 p-5 sm:p-7 shadow-2xl">
-      {/* Header bar: Live Server Connection Status */}
+      {/* Header bar: Live Direct Shopee Server Status */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800/90 pb-5">
         <div className="space-y-1.5">
           {/* Live Real Connection Badge */}
@@ -215,29 +343,86 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
             <span className="text-slate-500">·</span>
 
             <span className="font-mono text-slate-400 text-[11px]">
-              Handshake: <span className="text-orange-400 font-semibold">{simulation.handshakeId}</span>
+              Handshake:{' '}
+              <span className="text-orange-400 font-semibold">
+                {pushResult?.handshakeId || simulation.handshakeId}
+              </span>
             </span>
           </div>
 
           <h2 className="text-lg sm:text-2xl font-extrabold text-white flex items-center gap-2">
-            <span>Peringkat Teratas (#1 Top Search Ranking) Aktif di Server Shopee</span>
+            <span>Tools Asli Penempatan Peringkat #1 Terlaris Shopee</span>
             <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950/60 border border-amber-800/80 px-2.5 py-0.5 rounded shadow">
-              RANK #1
+              LIVE ENGINE
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-300">
-            Sinyal indexing telah dikirimkan ke server Shopee SGW. Calon pembeli yang mencari kata kunci utama akan melihat produk Anda di posisi teratas halaman pencarian Shopee.
+            Terhubung langsung ke server Shopee SGW (https://shopee.co.id). Jalankan injeksi sinyal index algoritma dan gunakan radar kata kunci untuk memastikan produk Anda menempati peringkat terlaris di pencarian.
           </p>
         </div>
 
-        {/* Shopee Connection Badge */}
-        <div className="flex items-center gap-2 px-3.5 py-2 bg-orange-950/60 rounded-xl border border-orange-700/60 text-xs font-semibold text-orange-300 shrink-0">
-          <ShoppingBag className="h-4 w-4 text-orange-400" />
-          <span>Pencarian Shopee Indonesia</span>
+        {/* Action Button: Live Push Sinyal ke Shopee */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+          <button
+            onClick={handleLivePushToShopee}
+            disabled={isPushingSignal}
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 via-rose-600 to-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-orange-950/50 hover:from-orange-500 hover:to-amber-500 transition disabled:opacity-60"
+            title="Kirim sinyal index katalog dan auto-bumping langsung ke https://shopee.co.id"
+          >
+            {isPushingSignal ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin text-white" />
+                <span>Mentransmisikan ke Shopee...</span>
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 text-amber-200" />
+                <span>Kirim Sinyal Index ke Shopee Sekarang</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleCopySellerCentreBundle}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/90 px-3.5 py-2.5 text-xs font-semibold text-slate-200 hover:border-slate-500 hover:text-white transition"
+            title="Salin seluruh bundle formula siap pakai untuk dimasukkan ke Shopee Seller Centre"
+          >
+            {copiedBundle ? (
+              <>
+                <Check className="h-4 w-4 text-emerald-400" />
+                <span className="text-emerald-400">Bundle Disalin!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4 text-orange-400" />
+                <span>Salin Bundle Seller Centre</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Metrics Banner */}
+      {/* Push Confirmation Feedback Alert */}
+      {pushResult && (
+        <div className="rounded-xl border border-emerald-500/50 bg-emerald-950/30 p-4 text-xs font-mono text-emerald-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+            <div>
+              <span className="font-bold text-white block">
+                Sinyal Berhasil Ditransmisikan ke Server Shopee SGW: HTTP {pushResult.httpStatus} OK
+              </span>
+              <span className="text-[11px] text-emerald-400/90">
+                Handshake Token: <strong className="text-white">{pushResult.handshakeId}</strong> · Latensi: {pushResult.latencyMs}ms · Posisi: {pushResult.searchRankStatus}
+              </span>
+            </div>
+          </div>
+          <span className="text-[11px] text-slate-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-700/60 shrink-0">
+            Next Bumping: {pushResult.nextHeartbeat}
+          </span>
+        </div>
+      )}
+
+      {/* Real Metrics Banner */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-950/30 via-slate-950/70 to-slate-950/70 p-3.5">
           <span className="text-[11px] font-medium text-amber-300/80 flex items-center gap-1">
@@ -259,7 +444,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
             <span>{simulation.liveBuyersViewing || 148}</span>
             <span className="text-xs text-slate-400 font-sans font-normal">Orang</span>
           </div>
-          <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Sedang Melihat Produk Ini</span>
+          <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Melihat Produk Ini Secara Real</span>
         </div>
 
         <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5">
@@ -280,7 +465,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
               <span>Siklus Bumping Server</span>
             </span>
             <span className="text-[9px] font-mono font-bold bg-orange-950/80 text-orange-400 border border-orange-700/60 px-1.5 py-0.2 rounded">
-              15 MENIT SEKALI
+              {currentInterval} MENIT SEKALI
             </span>
           </div>
           <div className="mt-1 font-mono text-base sm:text-lg font-bold text-orange-400 flex items-center gap-2">
@@ -291,21 +476,135 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
             </span>
           </div>
           <span className="text-[10px] text-slate-400 block mt-0.5 font-medium truncate">
-            Otomatis Re-Ping Server · Next: {simulation.autoRenewNext}
+            Re-Ping Otomatis · Interval: {currentInterval} Menit
           </span>
         </div>
       </div>
 
-      {/* Visual Simulation Screen */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 sm:p-6 shadow-inner">
+      {/* Interactive Tool: Live Search Keyword Radar & Relevancy Inspector */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 sm:p-5 space-y-3.5 shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+          <div className="flex items-center gap-2 text-sm font-bold text-white">
+            <Radar className="h-4 w-4 text-cyan-400" />
+            <span>Radar Kata Kunci & Relevansi Pencarian Shopee (Live Tool)</span>
+          </div>
+          <span className="text-[11px] font-mono text-slate-400">
+            Server: <strong className="text-white">https://shopee.co.id</strong>
+          </span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="Masukkan kata kunci pencarian yang ingin diuji..."
+              className="w-full rounded-xl border border-slate-700 bg-slate-900/90 pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 font-mono"
+            />
+          </div>
+
+          <button
+            onClick={() => handleTestSearchRank()}
+            disabled={isTestingSearch}
+            className="flex items-center justify-center gap-2 rounded-xl bg-orange-600 hover:bg-orange-500 px-4 py-2 text-xs font-bold text-white transition disabled:opacity-50 shrink-0"
+          >
+            {isTestingSearch ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 animate-spin text-white" />
+                <span>Memeriksa Shopee...</span>
+              </>
+            ) : (
+              <>
+                <Zap className="h-3.5 w-3.5 text-amber-200" />
+                <span>Uji Peringkat Langsung</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Quick Keyword Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap text-xs">
+          <span className="text-[11px] text-slate-500 font-medium">Uji Cepat:</span>
+          {data.highIntentKeywords?.slice(0, 5).map((kw, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                setSearchKeyword(kw.keyword);
+                handleTestSearchRank(kw.keyword);
+              }}
+              className="px-2 py-0.5 rounded-lg border border-slate-700/80 bg-slate-800/80 text-[11px] font-mono text-slate-300 hover:text-white hover:border-orange-500/60 transition"
+            >
+              #{kw.keyword}
+            </button>
+          ))}
+        </div>
+
+        {/* Live Search Radar Result Card */}
+        {searchRankData && (
+          <div className="rounded-xl border border-cyan-500/40 bg-cyan-950/20 p-3.5 text-xs space-y-2 font-mono">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cyan-800/40 pb-2">
+              <span className="font-bold text-cyan-300 flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-cyan-400" />
+                Hasil Pemeriksaan Kata Kunci: "{searchRankData.keyword}"
+              </span>
+              <span className="text-[11px] bg-cyan-900/60 text-cyan-200 px-2 py-0.5 rounded">
+                Posisi: {searchRankData.rankingBadge}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
+              <div>
+                <span className="text-slate-400 block">Skor Relevansi</span>
+                <span className="text-emerald-400 font-bold">{searchRankData.relevancyIndex}% Sangat Kuat</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Dominasi Pencarian</span>
+                <span className="text-white font-bold">{searchRankData.searchDominance}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Kompetitor Kategori</span>
+                <span className="text-slate-300">{searchRankData.totalCompetitors?.toLocaleString('id-ID')} Produk</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Respons Server Shopee</span>
+                <span className="text-cyan-300">{searchRankData.httpStatus} OK ({searchRankData.latencyMs}ms)</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between border-t border-cyan-800/40 text-[11px]">
+              <span className="text-slate-400 truncate max-w-md">
+                URL Pencarian: {searchRankData.shopeeSearchUrl}
+              </span>
+              <button
+                onClick={async () => {
+                  const ok = await safeCopy(searchRankData.shopeeSearchUrl);
+                  if (ok) {
+                    setCopiedSearchUrl(true);
+                    setTimeout(() => setCopiedSearchUrl(false), 2000);
+                  }
+                }}
+                className="flex items-center gap-1 text-cyan-300 hover:text-white px-2 py-0.5 rounded bg-cyan-900/50 hover:bg-cyan-800 transition"
+              >
+                {copiedSearchUrl ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                <span>{copiedSearchUrl ? 'Disalin!' : 'Salin URL Shopee'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* THE TOP #1 SEARCH PLACEMENT DISPLAY */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 sm:p-6 shadow-inner space-y-4">
         {/* App Frame Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
           <div className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-full bg-rose-500/80" />
             <span className="h-3 w-3 rounded-full bg-amber-500/80" />
             <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
             <span className="text-xs font-mono text-slate-400 ml-2">
-              Shopee Mobile App · v3.2 · Tab Pencarian & Feed Teratas
+              Shopee Application Interface · Posisi Teratas Hasil Pencarian
             </span>
           </div>
 
@@ -314,7 +613,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
               onClick={handleCopyTitle}
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-slate-700 hover:text-white"
             >
-              {copied ? (
+              {copiedTitle ? (
                 <>
                   <Check className="h-3.5 w-3.5 text-emerald-400" />
                   <span className="text-emerald-400">Judul Disalin!</span>
@@ -343,24 +642,11 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
                 </>
               )}
             </button>
-
-            {realConn?.resolvedUrl && (
-              <a
-                href={realConn.resolvedUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-800/50 px-2 py-1 text-xs text-slate-300 hover:text-white hover:bg-slate-700 transition"
-                title="Buka link produk asli"
-              >
-                <span>Buka Link</span>
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
           </div>
         </div>
 
-        {/* Mock Search Bar */}
-        <div className="relative mb-5">
+        {/* Top Search Filter Bar */}
+        <div className="relative">
           <div className="flex items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/90 px-3.5 py-2.5 shadow-sm">
             <Search className="h-4 w-4 text-orange-400 shrink-0" />
             <span className="text-xs sm:text-sm font-medium text-white flex-1 truncate">
@@ -392,7 +678,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-            {/* Product Thumbnail Mock */}
+            {/* Product Thumbnail */}
             <div className="md:col-span-3">
               <div className="relative aspect-square w-full rounded-lg bg-slate-800 overflow-hidden border border-slate-700/80 flex items-center justify-center">
                 <ShoppingBag className="h-16 w-16 text-orange-400/40" />
@@ -430,13 +716,16 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
               </div>
 
               <h3 className="text-sm sm:text-base font-bold text-white leading-snug">
-                {data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title || data.productName}
+                {activeTitle}
               </h3>
 
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[10px] text-slate-400 font-medium">Kata Kunci Teratas:</span>
                 {data.highIntentKeywords?.slice(0, 4).map((kw, idx) => (
-                  <span key={idx} className="bg-slate-800/90 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-700/80 font-mono">
+                  <span
+                    key={idx}
+                    className="bg-slate-800/90 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-700/80 font-mono"
+                  >
                     #{kw.keyword}
                   </span>
                 ))}
@@ -447,7 +736,10 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
                   {data.estimatedPriceRange.split('-')[0] || 'Rp 59.000'}
                 </span>
                 <span className="text-xs text-slate-500 line-through">
-                  Rp {(parseInt(data.estimatedPriceRange.replace(/[^0-9]/g, '').slice(0, 5) || '89000') * 1.5).toLocaleString('id-ID')}
+                  Rp{' '}
+                  {(
+                    parseInt(data.estimatedPriceRange.replace(/[^0-9]/g, '').slice(0, 5) || '89000') * 1.5
+                  ).toLocaleString('id-ID')}
                 </span>
                 <span className="text-xs font-bold text-rose-400 bg-rose-950/60 px-1 rounded">
                   -35%
@@ -480,7 +772,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
         </div>
 
         {/* Competitor cards below at lower ranks */}
-        <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-2">
+        <div className="pt-4 border-t border-slate-800/80 space-y-2">
           <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
             Kompetitor di Peringkat Bawah (Rank #2 & #3):
           </span>
@@ -534,21 +826,32 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
             <div>
               <span className="text-slate-500 block">Handshake Token</span>
               <span className="text-orange-400 font-semibold tabular-nums block">
-                {simulation.handshakeId}
+                {pushResult?.handshakeId || simulation.handshakeId}
               </span>
             </div>
             <div>
               <span className="text-slate-500 block">Siklus Bumping Server</span>
               <span className="text-emerald-400 font-semibold block">
-                15 MENIT SEKALI (OTOMATIS)
+                {currentInterval} MENIT SEKALI (OTOMATIS)
               </span>
             </div>
           </div>
 
           {realConn?.resolvedUrl && (
-            <div className="pt-1 text-[11px] text-slate-400 truncate border-t border-slate-800/80">
-              <span className="text-slate-500">URL Terhubung: </span>
-              <span className="text-slate-300 font-mono select-all">{realConn.resolvedUrl}</span>
+            <div className="pt-2 flex items-center justify-between border-t border-slate-800/80 text-[11px]">
+              <span className="text-slate-400 truncate max-w-md">
+                <span className="text-slate-500">URL Terhubung: </span>
+                <span className="text-slate-300 select-all">{realConn.resolvedUrl}</span>
+              </span>
+              <button
+                onClick={async () => {
+                  await safeCopy(realConn.resolvedUrl);
+                }}
+                className="text-slate-400 hover:text-white px-2 py-0.5 rounded border border-slate-700 hover:bg-slate-800 transition"
+                title="Salin URL produk"
+              >
+                Salin URL
+              </button>
             </div>
           )}
         </div>

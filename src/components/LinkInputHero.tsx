@@ -148,7 +148,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white" style={{ textWrap: 'balance' }}>
-                Boost Produk Shopee Langsung ke Server Shopee SGW
+                Shopee Boost Produk
               </h1>
 
               <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-xl">
