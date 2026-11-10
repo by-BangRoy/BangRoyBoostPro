@@ -37,7 +37,7 @@ export const ServerNodesModal: React.FC<ServerNodesModalProps> = ({
               <h2 className="text-lg font-bold text-white">Status Server Gateway E-Commerce</h2>
             </div>
             <p className="mt-1 text-xs text-slate-400">
-              Koneksi langsung ke API Partner Shopee Open Platform & TikTok Shop Global Edge Network.
+              Koneksi langsung ke API Partner Shopee Open Platform & Shopee SGW Gateway Hub.
             </p>
           </div>
           <button

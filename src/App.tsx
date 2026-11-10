@@ -32,36 +32,33 @@ export default function App() {
   const [servers, setServers] = useState<ServerNode[]>([]);
   const [serverPing, setServerPing] = useState<number | null>(null);
 
-  // History state (supports migration from previous key)
+  // History state with automatic sanitization of corrupted TikTok / Security Check items
   const [history, setHistory] = useState<BoostHistoryItem[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('omniboost_history_v1');
-      return stored ? JSON.parse(stored) : [];
+      if (!stored) return [];
+      const parsed: BoostHistoryItem[] = JSON.parse(stored);
+      // Clean history: remove TikTok items, WAF "Security Check" entries, and invalid titles
+      return parsed.filter(
+        (item) =>
+          item.platform === 'shopee' &&
+          item.productName &&
+          !item.productName.toLowerCase().includes('security check') &&
+          !item.productName.toLowerCase().includes('login') &&
+          item.productName.trim().length > 3
+      );
     } catch {
       return [];
     }
   });
 
-  // Detect platform as user types
+  // Detect platform as user types (Shopee exclusive)
   useEffect(() => {
-    const lower = url.toLowerCase();
-    if (
-      lower.includes('shopee.co.id') ||
-      lower.includes('shopee.com') ||
-      lower.includes('shope.ee') ||
-      lower.includes('shp.ee') ||
-      lower.includes('shopee')
-    ) {
-      setDetectedPlatform('shopee');
-    } else if (
-      lower.includes('tiktok.com') ||
-      lower.includes('vt.tiktok.com') ||
-      lower.includes('shop.tiktok.com') ||
-      lower.includes('vm.tiktok.com')
-    ) {
-      setDetectedPlatform('tiktok');
-    } else {
+    const lower = url.toLowerCase().trim();
+    if (!lower) {
       setDetectedPlatform('unknown');
+    } else {
+      setDetectedPlatform('shopee');
     }
   }, [url]);
 
@@ -95,6 +92,16 @@ export default function App() {
       console.error('Failed to save history', e);
     }
   }, [history]);
+
+  const handleClearAllHistory = () => {
+    setHistory([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('omniboost_history_v1');
+    } catch (e) {
+      console.error('Failed to clear history', e);
+    }
+  };
 
   // Handle URL analyze
   // Handle URL analyze & automatic server boosting
@@ -163,14 +170,14 @@ export default function App() {
       setHistory((prev) => [newItem, ...prev.filter((item) => item.productName !== productData.productName)]);
       setActiveTab('booster');
 
-      // Trigger celebratory confetti for reaching Rank #1 Terlaris
+      // Trigger celebratory confetti for reaching Rank #1 Terlaris Shopee
       import('canvas-confetti').then((confettiModule) => {
         const confettiFn = confettiModule.default;
         confettiFn({
           particleCount: 85,
           spread: 80,
           origin: { y: 0.65 },
-          colors: activePlatform === 'shopee' ? ['#f97316', '#fb923c', '#fdba74', '#eab308'] : ['#06b6d4', '#22d3ee', '#67e8f9', '#ec4899'],
+          colors: ['#f97316', '#fb923c', '#fdba74', '#ea580c', '#eab308'],
         });
       });
 
@@ -284,27 +291,27 @@ export default function App() {
                   </div>
                   <div className="space-y-1.5 max-w-md mx-auto">
                     <h3 className="text-base sm:text-lg font-bold text-white">
-                      Siap Mengoptimasi & Menghubungkan Server
+                      Siap Mengoptimasi & Menghubungkan Server Shopee SGW
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                      Masukkan tautan produk Shopee atau TikTok Shop di kotak atas, atau klik salah satu contoh produk populer untuk melihat keajaiban algoritma peringkat teratas.
+                      Masukkan tautan produk Shopee (shopee.co.id atau shp.ee) di kolom atas, atau klik salah satu contoh produk populer untuk langsung memicu koneksi server real dan turbo boost.
                     </p>
                   </div>
 
                   <div className="pt-2 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-mono">
-                    <span className="flex items-center gap-1.5">
-                      <ShoppingBag className="h-3.5 w-3.5 text-orange-400" />
-                      Turbo 15M Bumping Ready
+                    <span className="flex items-center gap-1.5 text-orange-400">
+                      <ShoppingBag className="h-3.5 w-3.5" />
+                      Shopee SGW Gateway Connected
                     </span>
                     <span className="text-slate-700">·</span>
-                    <span className="flex items-center gap-1.5">
-                      <Video className="h-3.5 w-3.5 text-cyan-400" />
-                      TikTok FYP SEO Ready
+                    <span className="flex items-center gap-1.5 text-amber-400">
+                      <Clock className="h-3.5 w-3.5" />
+                      Auto-Bumping 15 Menit Sekali
                     </span>
                     <span className="text-slate-700">·</span>
                     <span className="flex items-center gap-1.5 text-emerald-400">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      Latency ~14ms
+                      Latency ~14ms (Direct)
                     </span>
                   </div>
                 </div>
@@ -319,14 +326,14 @@ export default function App() {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2 text-orange-400 font-bold text-lg">
                     <ShoppingBag className="h-6 w-6" />
-                    <h2>Siklus Bumping Otomatis Server 15 Menit Sekali (Shopee & TikTok)</h2>
+                    <h2>Siklus Bumping Otomatis Server 15 Menit Sekali (Shopee SGW)</h2>
                   </div>
                   <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-950/80 border border-emerald-600/60 text-emerald-300">
                     Siklus: 15 Menit Sekali (Aktif)
                   </span>
                 </div>
                 <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
-                  Sistem BangRoyBoost menghubungkan produk Anda langsung ke server Shopee (SGW) dan TikTok (TLB) secara berkala setiap <strong>15 menit sekali</strong>. Algoritma melakukan re-index pencarian otomatis, menjaga produk tetap berada di urutan teratas katalog, dan memastikan produk selalu segar di hadapan calon pembeli aktif.
+                  Sistem BangRoyBoost menghubungkan produk Anda langsung ke server Shopee SGW Gateway secara berkala setiap <strong>15 menit sekali</strong>. Algoritma melakukan re-index pencarian otomatis, menjaga produk tetap berada di urutan teratas katalog, dan memastikan produk selalu segar di hadapan calon pembeli aktif.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
@@ -341,12 +348,12 @@ export default function App() {
                     <p className="text-xs text-slate-400">Otomasi penjadwalan produk unggulan agar selalu tampil di tab Terkait & Terbaru.</p>
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                    <span className="text-xs font-mono text-cyan-400 font-bold">TikTok Shop TLB</span>
-                    <h4 className="text-sm font-semibold text-white">FYP Tag Ingestion</h4>
-                    <p className="text-xs text-slate-400">Injeksi kata kunci relevansi tinggi ke index pencarian video & katalog belanja TikTok.</p>
+                    <span className="text-xs font-mono text-amber-400 font-bold">Shopee OpenAPI Node</span>
+                    <h4 className="text-sm font-semibold text-white">Search Discovery Engine</h4>
+                    <p className="text-xs text-slate-400">Injeksi kata kunci relevansi tinggi ke index pencarian katalog belanja Shopee.</p>
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                    <span className="text-xs font-mono text-amber-400 font-bold">Dominasi Peringkat</span>
+                    <span className="text-xs font-mono text-emerald-400 font-bold">Dominasi Peringkat</span>
                     <h4 className="text-sm font-semibold text-white">Posisi #1 Terlaris</h4>
                     <p className="text-xs text-slate-400">Mengalahkan ribuan produk kompetitor dengan continuous server presence.</p>
                   </div>
@@ -363,42 +370,42 @@ export default function App() {
                     }}
                     className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-500 transition whitespace-nowrap shrink-0"
                   >
-                    Mulai Boost Produk Sekarang
+                    Mulai Boost Produk Shopee Sekarang
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* TikTok Hooks Tab */}
-          {activeTab === 'tiktok-hooks' && (
+          {/* Shopee Live & Formula Showcase Tab */}
+          {activeTab === 'shopee-live' && (
             <div className="space-y-6">
-              <div className="rounded-2xl border border-cyan-500/30 bg-slate-900/80 p-6 sm:p-8 space-y-4">
-                <div className="flex items-center gap-2 text-cyan-400 font-bold text-lg">
-                  <Video className="h-6 w-6" />
-                  <h2>Algoritma Video FYP & Keranjang Kuning TikTok Shop</h2>
+              <div className="rounded-2xl border border-orange-500/30 bg-slate-900/80 p-6 sm:p-8 space-y-4">
+                <div className="flex items-center gap-2 text-orange-400 font-bold text-lg">
+                  <ShoppingBag className="h-6 w-6" />
+                  <h2>Algoritma Shopee Live Stream & Formula Judul Terlaris</h2>
                 </div>
                 <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
-                  Algoritma TikTok memprioritaskan video dengan retensi 3 detik pertama tertinggi (Stop-Scroll Rate $\ge 65\%$) dan rasio penonton yang mengklik ikon keranjang kuning (CTR Keranjang $\ge 4.5\%$).
+                  Algoritma Shopee memprioritaskan toko yang mengombinasikan judul berstruktur SEO baku (Brand + Fitur + USP + Promo XTRA) dengan sinyal live stream aktif untuk mendapatkan alokasi traffic organik gratis dari halaman utama.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                    <span className="text-xs font-mono text-cyan-400 font-bold">Formula 1</span>
-                    <h4 className="text-sm font-semibold text-white">Problem - Agitate - Solution</h4>
-                    <p className="text-xs text-slate-400">Tunjukkan masalah menjengkelkan di 2 detik pertama, lalu hadirkan produk sebagai solusi instan.</p>
+                    <span className="text-xs font-mono text-orange-400 font-bold">Formula 1</span>
+                    <h4 className="text-sm font-semibold text-white">Shopee Star+ Official Formula</h4>
+                    <p className="text-xs text-slate-400">[OFFICIAL / STAR+] + Nama Produk Spesifik + USP Mutu + Promo Voucher Gratis Ongkir XTRA (100-120 Karakter).</p>
                   </div>
 
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                    <span className="text-xs font-mono text-cyan-400 font-bold">Formula 2</span>
-                    <h4 className="text-sm font-semibold text-white">Unboxing ASMR & Spill Jujur</h4>
-                    <p className="text-xs text-slate-400">Gaya konten organik non-iklan dengan audio clean tap yang memicu rasa ingin tahu penonton.</p>
+                    <span className="text-xs font-mono text-amber-400 font-bold">Formula 2</span>
+                    <h4 className="text-sm font-semibold text-white">Promo Flash Sale & Bestseller</h4>
+                    <p className="text-xs text-slate-400">Targeting kata kunci bervolume tinggi dengan penawaran urgensi COD, diskon kilat, dan cashback ekstra.</p>
                   </div>
 
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                    <span className="text-xs font-mono text-cyan-400 font-bold">Formula 3</span>
-                    <h4 className="text-sm font-semibold text-white">Flash Sale & Urgensi Kupon</h4>
-                    <p className="text-xs text-slate-400">Menekankan diskon terbatas yang hanya aktif saat video ditonton untuk memicu checkout cepat.</p>
+                    <span className="text-xs font-mono text-emerald-400 font-bold">Formula 3</span>
+                    <h4 className="text-sm font-semibold text-white">Shopee Live Pin Etalase</h4>
+                    <p className="text-xs text-slate-400">Teknik seruan host berkala tiap 45 detik untuk mendorong penonton mengklaim voucher live 50% di etalase #1.</p>
                   </div>
                 </div>
 
@@ -408,9 +415,9 @@ export default function App() {
                       setActiveTab('booster');
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
-                    className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold text-white hover:bg-cyan-500 transition"
+                    className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-500 transition"
                   >
-                    Generate Script untuk Produk Anda
+                    Optimasi Produk Shopee Sekarang
                   </button>
                 </div>
               </div>
@@ -423,6 +430,7 @@ export default function App() {
               history={history}
               onSelectProduct={handleSelectHistoryItem}
               onDeleteProduct={handleDeleteHistoryItem}
+              onClearAll={handleClearAllHistory}
               onReboost={(item) => {
                 setUrl(item.originalUrl);
                 setAnalysisData(item.data);
@@ -438,6 +446,7 @@ export default function App() {
                 history={history}
                 onSelectProduct={handleSelectHistoryItem}
                 onDeleteProduct={handleDeleteHistoryItem}
+                onClearAll={handleClearAllHistory}
                 onReboost={(item) => {
                   setUrl(item.originalUrl);
                   setAnalysisData(item.data);

@@ -1,11 +1,12 @@
-export type PlatformType = 'shopee' | 'tiktok' | 'unknown';
+export type PlatformType = 'shopee' | 'unknown';
+export type BumpingIntervalMinutes = 1 | 5 | 10 | 15;
 
 export interface OptimizedTitle {
   platform: string;
   title: string;
   charCount: number;
   formula: string;
-  formulaType?: 'official' | 'promo' | 'high_intent' | 'viral_fyp' | 'unboxing_spill' | 'problem_solution';
+  formulaType?: 'official' | 'promo' | 'high_intent' | 'flash_sale' | 'bestseller' | 'viral_fyp' | 'unboxing_spill' | 'problem_solution';
   formulaBadge?: string;
   searchRelevanceScore?: number;
 }
@@ -68,6 +69,7 @@ export interface SearchSimulation {
   serverLatencyMs: number;
   handshakeId: string;
   autoRenewNext: string;
+  bumpingIntervalMinutes?: BumpingIntervalMinutes;
   liveBuyersViewing?: number;
   salesRankBadge?: string;
   conversionBoostMultiplier?: string;
@@ -128,5 +130,6 @@ export interface BoostHistoryItem {
   handshakeId: string;
   status: 'active' | 'queued' | 'completed';
   autoSchedule: boolean;
+  bumpingIntervalMinutes?: BumpingIntervalMinutes;
   data: BoostAnalysisData;
 }

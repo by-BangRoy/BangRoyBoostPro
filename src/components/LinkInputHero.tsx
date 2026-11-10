@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { ArrowRight, Sparkles, Link2, ShoppingBag, Video, CheckCircle2, Zap } from 'lucide-react';
-import { PlatformType } from '../types';
+import { ArrowRight, Sparkles, Link2, ShoppingBag, Video, CheckCircle2, Zap, Clock } from 'lucide-react';
+import { PlatformType, BumpingIntervalMinutes } from '../types';
 
 interface LinkInputHeroProps {
   url: string;
   setUrl: (url: string) => void;
-  onAnalyze: (overrideUrl?: string, customCategory?: string, targetAudience?: string) => Promise<void>;
+  onAnalyze: (overrideUrl?: string, customCategory?: string, targetAudience?: string, overrideInterval?: BumpingIntervalMinutes) => Promise<void>;
   isLoading: boolean;
   detectedPlatform: PlatformType;
+  bumpingInterval: BumpingIntervalMinutes;
+  setBumpingInterval: (interval: BumpingIntervalMinutes) => void;
 }
 
 const SAMPLE_PRODUCTS = [
@@ -18,9 +20,9 @@ const SAMPLE_PRODUCTS = [
     category: 'Fashion Pria',
   },
   {
-    title: 'TikTok Shop: Serum Niacinamide Glowing',
-    platform: 'tiktok' as const,
-    url: 'https://shop.tiktok.com/view/product/1729482910384918231',
+    title: 'Shopee: Serum Niacinamide Glowing Premium',
+    platform: 'shopee' as const,
+    url: 'https://shopee.co.id/Serum-Niacinamide-Glowing-Mencerahkan-Kulit-i.18291038.7182910283',
     category: 'Beauty & Skincare',
   },
   {
@@ -30,10 +32,10 @@ const SAMPLE_PRODUCTS = [
     category: 'Gadget & Aksesoris',
   },
   {
-    title: 'TikTok Shop: Keripik Kaca Pedas Jeruk',
-    platform: 'tiktok' as const,
-    url: 'https://shop.tiktok.com/view/product/1729482910992318491',
-    category: 'Makanan & Snack Viral',
+    title: 'Shopee: Mukena Silk Premium Cantik Mewah',
+    platform: 'shopee' as const,
+    url: 'https://shopee.co.id/Mukena-Silk-Premium-Mewah-Adem-i.39102819.8291029381',
+    category: 'Fashion Muslimah',
   },
 ];
 
@@ -43,6 +45,8 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
   onAnalyze,
   isLoading,
   detectedPlatform,
+  bumpingInterval,
+  setBumpingInterval,
 }) => {
   const [showOptions, setShowOptions] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
@@ -60,7 +64,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
     if (clean !== url) {
       setUrl(clean);
     }
-    onAnalyze(clean, customCategory, targetAudience);
+    onAnalyze(clean, customCategory, targetAudience, bumpingInterval);
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -73,7 +77,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
 
     if (autoBoostOnPaste && clean) {
       setTimeout(() => {
-        onAnalyze(clean, customCategory, targetAudience);
+        onAnalyze(clean, customCategory, targetAudience, bumpingInterval);
       }, 50);
     }
   };
@@ -87,7 +91,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
           const clean = match ? match[0].replace(/[.,;!)]+$/, '') : text.trim();
           if (clean) {
             setUrl(clean);
-            onAnalyze(clean, customCategory, targetAudience);
+            onAnalyze(clean, customCategory, targetAudience, bumpingInterval);
             return;
           }
         }
@@ -97,7 +101,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
     }
 
     if (url.trim()) {
-      onAnalyze(url.trim(), customCategory, targetAudience);
+      onAnalyze(url.trim(), customCategory, targetAudience, bumpingInterval);
       return;
     }
 
@@ -111,7 +115,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
   const handleSelectSample = (sample: typeof SAMPLE_PRODUCTS[0]) => {
     setUrl(sample.url);
     setCustomCategory(sample.category);
-    onAnalyze(sample.url, sample.category, targetAudience);
+    onAnalyze(sample.url, sample.category, targetAudience, bumpingInterval);
   };
 
   return (
@@ -119,7 +123,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
       {/* Subtle ambient gradient mesh */}
       <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
         <div className="h-[360px] w-[500px] rounded-full bg-orange-600/10 blur-[120px]" />
-        <div className="h-[280px] w-[420px] rounded-full bg-cyan-600/10 blur-[100px]" />
+        <div className="h-[280px] w-[420px] rounded-full bg-amber-600/10 blur-[100px]" />
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -128,19 +132,19 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
           <div className="lg:col-span-7 space-y-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-                <span className="text-orange-400">Algoritma FYP & Search Engine</span>
+                <span className="text-orange-400">Shopee OpenAPI & SGW Gateway</span>
                 <span aria-hidden="true">·</span>
-                <span>Shopee OpenAPI & TikTok Cluster</span>
+                <span>Auto-Bumping {bumpingInterval}M Engine</span>
                 <span aria-hidden="true">·</span>
-                <span className="text-emerald-400">Sinkronisasi Instan</span>
+                <span className="text-emerald-400">Sinkronisasi Realtime</span>
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white" style={{ textWrap: 'balance' }}>
-                Boost Produk TikTok & Shopee Langsung ke Server Platform
+                Boost Produk Shopee Langsung ke Server Shopee SGW
               </h1>
 
               <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-xl">
-                Cukup masukkan link produk Anda. Sistem secara otomatis memetakan katalog, mengoptimasi formula kata kunci SEO, menjadwalkan auto-bumping 15 menit sekali ke server Shopee & TikTok Shop, dan menghasilkan script video viral.
+                Cukup masukkan link produk Shopee Anda. Sistem secara otomatis memetakan katalog, mengoptimasi formula kata kunci SEO Shopee, dan menjadwalkan auto-bumping ({bumpingInterval} menit sekali) ke server Shopee SGW agar selalu berada di peringkat #1 pencarian terlaris.
               </p>
             </div>
 
@@ -154,7 +158,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     onPaste={handlePaste}
-                    placeholder="Masukkan tautan produk Shopee atau TikTok Shop di sini..."
+                    placeholder="Masukkan tautan produk Shopee (shopee.co.id / shp.ee) di sini..."
                     className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
                     disabled={isLoading}
                   />
@@ -172,21 +176,44 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
                   )}
 
                   {/* Platform Indicator */}
-                  {detectedPlatform !== 'unknown' && (
-                    <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold">
-                      {detectedPlatform === 'shopee' ? (
-                        <span className="flex items-center gap-1 text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/30">
-                          <ShoppingBag className="h-3.5 w-3.5" />
-                          Shopee
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">
-                          <Video className="h-3.5 w-3.5" />
-                          TikTok
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold">
+                    <span className="flex items-center gap-1 text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/30">
+                      <ShoppingBag className="h-3.5 w-3.5" />
+                      Shopee SGW
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pilihan Siklus Bumping Bar */}
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 px-2 pt-2.5">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-300">
+                    <Clock className="h-3.5 w-3.5 text-orange-400" />
+                    <span className="font-semibold text-white">Siklus Bumping:</span>
+                    <span className="hidden sm:inline text-[11px] text-slate-400">Pilih interval server</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {([
+                      { val: 1 as const, label: '1 Menit Sekali' },
+                      { val: 5 as const, label: '5 Menit Sekali' },
+                      { val: 10 as const, label: '10 Menit Sekali' },
+                      { val: 15 as const, label: '15 Menit Sekali' },
+                    ]).map((opt) => (
+                      <button
+                        key={opt.val}
+                        type="button"
+                        onClick={() => setBumpingInterval(opt.val)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                          bumpingInterval === opt.val
+                            ? 'bg-orange-500/20 border-orange-500 text-orange-300 ring-1 ring-orange-500/40 shadow-sm shadow-orange-950'
+                            : 'bg-slate-800/60 border-slate-700/80 text-slate-400 hover:text-slate-200 hover:border-slate-600'
+                        }`}
+                        title={`Koneksi otomatis dan auto-bumping ke server Shopee setiap ${opt.val} menit sekali`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${bumpingInterval === opt.val ? 'bg-orange-400 animate-pulse' : 'bg-transparent'}`} />
+                        <span>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Submit Action Bar */}
@@ -230,7 +257,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
                     <button
                       type="submit"
                       disabled={isLoading || !url.trim()}
-                      className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 via-rose-600 to-cyan-600 px-5 py-2 text-xs font-bold text-white shadow-lg transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+                      className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-orange-950/40 transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
                     >
                       {isLoading ? (
                         <>
@@ -239,7 +266,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
                         </>
                       ) : (
                         <>
-                          <span>Peringkat Teratas (#1)</span>
+                          <span>Boost ke #1 Shopee</span>
                           <ArrowRight className="h-3.5 w-3.5" />
                         </>
                       )}
@@ -252,16 +279,16 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
               <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono text-slate-400 px-1">
                 <span className="flex items-center gap-1.5 text-emerald-400">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Shopee SGW: Live</span>
+                  <span>Shopee SGW Jakarta: Live</span>
                 </span>
                 <span className="text-slate-700">|</span>
-                <span className="flex items-center gap-1.5 text-cyan-400">
-                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                  <span>TikTok TLB: Live</span>
+                <span className="flex items-center gap-1.5 text-orange-400">
+                  <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
+                  <span>Shopee Partner OpenAPI: Live</span>
                 </span>
                 <span className="text-slate-700">|</span>
                 <span className="text-amber-400 font-semibold">
-                  Mode: Otomatis Naik ke #1 Terlaris
+                  Mode: Auto-Bumping {bumpingInterval} Menit Sekali ke #1 Terlaris
                 </span>
               </div>
 
@@ -309,11 +336,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
                     onClick={() => handleSelectSample(sample)}
                     className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-xs text-slate-300 transition hover:border-slate-700 hover:bg-slate-800 hover:text-white"
                   >
-                    {sample.platform === 'shopee' ? (
-                      <span className="text-orange-400 text-[11px] font-bold">Shopee</span>
-                    ) : (
-                      <span className="text-cyan-400 text-[11px] font-bold">TikTok</span>
-                    )}
+                    <span className="text-orange-400 text-[11px] font-bold">Shopee</span>
                     <span className="text-slate-400">·</span>
                     <span className="truncate max-w-[170px]">{sample.title.split(': ')[1]}</span>
                   </button>
@@ -343,7 +366,7 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
                   <span>Jalur Eksekusi Terverifikasi</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-snug">
-                  Shopee & TikTok 15-Minute Turbo Bumping Queue + Realtime Search Index Ingestion siap diaktifkan otomatis.
+                  Shopee 15-Minute Turbo Bumping Queue + Realtime Search Index Ingestion siap diaktifkan otomatis.
                 </p>
               </div>
             </div>

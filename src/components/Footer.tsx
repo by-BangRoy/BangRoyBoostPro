@@ -7,7 +7,7 @@ export const Footer: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="font-semibold text-slate-300">BangRoyBoost PRO</span>
           <span>·</span>
-          <span>Platform Growth Suite untuk TikTok Shop & Shopee Indonesia</span>
+          <span>Platform Growth Suite untuk Seller Shopee Indonesia (SGW Gateway)</span>
         </div>
 
         <div className="flex items-center gap-4">

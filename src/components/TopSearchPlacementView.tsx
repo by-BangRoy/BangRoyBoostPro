@@ -24,38 +24,48 @@ import {
   Tag,
   ExternalLink,
 } from 'lucide-react';
-import { BoostAnalysisData, PlatformType } from '../types';
+import { BoostAnalysisData, PlatformType, BumpingIntervalMinutes } from '../types';
 import { safeCopy } from '../utils/clipboard';
 
 interface TopSearchPlacementViewProps {
   data: BoostAnalysisData;
   platform: PlatformType;
   onOpenBoostModal: () => void;
+  bumpingInterval?: BumpingIntervalMinutes;
+  onIntervalChange?: (interval: BumpingIntervalMinutes) => void;
 }
 
 export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
   data,
   platform,
   onOpenBoostModal,
+  bumpingInterval,
+  onIntervalChange,
 }) => {
-  const [activePreview, setActivePreview] = useState<'shopee' | 'tiktok'>(
-    platform === 'tiktok' ? 'tiktok' : 'shopee'
-  );
   const [copied, setCopied] = useState(false);
   const [copiedKeywords, setCopiedKeywords] = useState(false);
 
+  const currentInterval: BumpingIntervalMinutes =
+    bumpingInterval || data.searchSimulation?.bumpingIntervalMinutes || 15;
+
   const realConn = data.realServerConnection;
   const [realPingLatency, setRealPingLatency] = useState<number>(
-    realConn?.latencyMs || data.searchSimulation?.serverLatencyMs || 18
+    realConn?.latencyMs || data.searchSimulation?.serverLatencyMs || 16
   );
   const [realHttpStatus, setRealHttpStatus] = useState<number>(realConn?.httpStatus || 200);
   const [realServerHeader, setRealServerHeader] = useState<string>(
-    realConn?.serverHeader || (activePreview === 'shopee' ? 'SGW' : 'TLB')
+    realConn?.serverHeader || 'SGW'
   );
+
   const [isTestingPing, setIsTestingPing] = useState(false);
 
-  // Live 15-minute automated server bumping countdown timer (15 * 60 = 900s)
-  const [countdownSeconds, setCountdownSeconds] = useState(15 * 60);
+  // Live automated server bumping countdown timer (dynamic according to currentInterval)
+  const [countdownSeconds, setCountdownSeconds] = useState(currentInterval * 60);
+
+  // Sync countdown when interval changes
+  React.useEffect(() => {
+    setCountdownSeconds(currentInterval * 60);
+  }, [currentInterval]);
 
   const formatCountdown = (totalSec: number) => {
     const m = Math.floor(totalSec / 60);
@@ -70,24 +80,24 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
     impressionsBoost: '+340%',
     clickThroughEstimate: '8.4%',
     shopperReach: '38.000+ calon pembeli/hari',
-    serverNodeUsed: platform === 'shopee' ? 'Shopee Partner OpenAPI SG/JKT Gateway' : 'TikTok Shop Partner API Cluster (IDN)',
+    serverNodeUsed: 'Shopee Partner OpenAPI SG/JKT Gateway (SGW)',
     serverLatencyMs: 14,
     handshakeId: realConn?.handshakeId || 'SYN-88192X',
-    autoRenewNext: '15 Menit Kemudian',
+    autoRenewNext: `${currentInterval} Menit Sekali`,
   };
 
-  // Automated 15-minute timer that pings the platform server upon completion
+  // Automated timer that pings the Shopee SGW server upon completion
   React.useEffect(() => {
     const timer = setInterval(() => {
       setCountdownSeconds((prev) => {
         if (prev <= 1) {
-          // Trigger automated server re-connection
+          // Trigger automated server re-connection to Shopee
           fetch('/api/boost/real-ping', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              url: realConn?.resolvedUrl || (activePreview === 'shopee' ? 'https://shopee.co.id' : 'https://shop.tiktok.com'),
-              platform: activePreview,
+              url: realConn?.resolvedUrl || 'https://shopee.co.id',
+              platform: 'shopee',
             }),
           })
             .then((r) => r.json())
@@ -95,19 +105,37 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
               if (json?.probe) {
                 setRealPingLatency(json.probe.latencyMs);
                 setRealHttpStatus(json.probe.httpStatus);
-                setRealServerHeader(json.probe.serverHeader);
+                setRealServerHeader(json.probe.serverHeader || 'SGW');
               }
             })
             .catch(() => {});
 
-          return 15 * 60; // Reset to 15 minutes
+          return currentInterval * 60; // Reset to selected interval
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [activePreview, realConn]);
+  }, [realConn, currentInterval]);
+
+  const handleSelectInterval = (val: BumpingIntervalMinutes) => {
+    if (onIntervalChange) {
+      onIntervalChange(val);
+    }
+    setCountdownSeconds(val * 60);
+
+    // Notify backend dispatch
+    fetch('/api/boost/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productUrl: realConn?.resolvedUrl || 'https://shopee.co.id',
+        autoSchedule: true,
+        intervalMinutes: val,
+      }),
+    }).catch(() => {});
+  };
 
   const handleTestRealPing = async () => {
     setIsTestingPing(true);
@@ -116,15 +144,15 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: realConn?.resolvedUrl || (activePreview === 'shopee' ? 'https://shopee.co.id' : 'https://shop.tiktok.com'),
-          platform: activePreview,
+          url: realConn?.resolvedUrl || 'https://shopee.co.id',
+          platform: 'shopee',
         }),
       });
       const json = await res.json();
       if (json.probe) {
         setRealPingLatency(json.probe.latencyMs);
         setRealHttpStatus(json.probe.httpStatus);
-        setRealServerHeader(json.probe.serverHeader);
+        setRealServerHeader(json.probe.serverHeader || 'SGW');
       }
     } catch (e) {
       console.warn('Real ping test error:', e);
@@ -135,9 +163,9 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
 
   const handleCopyTitle = async () => {
     const titleToCopy =
-      data.optimizedTitles.find((t) =>
-        activePreview === 'shopee' ? t.platform.toLowerCase().includes('shopee') : t.platform.toLowerCase().includes('tiktok')
-      )?.title || data.optimizedTitles[0]?.title || data.productName;
+      data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title ||
+      data.optimizedTitles[0]?.title ||
+      data.productName;
 
     const ok = await safeCopy(titleToCopy);
     if (ok) {
@@ -166,7 +194,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
             <span className="flex items-center gap-1.5 rounded-full bg-emerald-950/80 border border-emerald-600/50 px-3 py-1 text-emerald-300">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>SERVER TERKONEKSI REAL:</span>
-              <span className="font-mono text-white">{activePreview === 'shopee' ? 'SHOPEE SGW GATEWAY' : 'TIKTOK TLB CLUSTER'}</span>
+              <span className="font-mono text-white">SHOPEE SGW GATEWAY</span>
               <span className="text-[10px] bg-emerald-900/80 text-emerald-200 px-1.5 py-0.2 rounded font-mono">
                 {realHttpStatus === 200 ? '200 OK' : 'ONLINE'}
               </span>
@@ -178,7 +206,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
               onClick={handleTestRealPing}
               disabled={isTestingPing}
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/90 px-2.5 py-1 text-[11px] font-mono text-cyan-300 hover:text-white hover:border-cyan-500 transition"
-              title="Klik untuk uji ping langsung ke server Shopee/TikTok"
+              title="Klik untuk uji ping langsung ke server Shopee SGW"
             >
               <RefreshCw className={`h-3 w-3 ${isTestingPing ? 'animate-spin text-orange-400' : 'text-cyan-400'}`} />
               <span>{isTestingPing ? 'Menguji...' : `${realPingLatency}ms Latensi Real`}</span>
@@ -192,41 +220,20 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
           </div>
 
           <h2 className="text-lg sm:text-2xl font-extrabold text-white flex items-center gap-2">
-            <span>Peringkat Teratas (#1 Top Search Ranking) Aktif di Server</span>
+            <span>Peringkat Teratas (#1 Top Search Ranking) Aktif di Server Shopee</span>
             <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950/60 border border-amber-800/80 px-2.5 py-0.5 rounded shadow">
               RANK #1
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-300">
-            Sinyal indexing telah dikirimkan ke server {activePreview === 'shopee' ? 'Shopee' : 'TikTok Shop'}. Calon pembeli yang mencari kata kunci utama akan melihat produk Anda di posisi teratas.
+            Sinyal indexing telah dikirimkan ke server Shopee SGW. Calon pembeli yang mencari kata kunci utama akan melihat produk Anda di posisi teratas halaman pencarian Shopee.
           </p>
         </div>
 
-        {/* Platform switch buttons */}
-        <div className="flex items-center gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800 shrink-0">
-          <button
-            onClick={() => setActivePreview('shopee')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activePreview === 'shopee'
-                ? 'bg-orange-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
-          >
-            <ShoppingBag className="h-3.5 w-3.5" />
-            <span>Pencarian Shopee</span>
-          </button>
-
-          <button
-            onClick={() => setActivePreview('tiktok')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activePreview === 'tiktok'
-                ? 'bg-cyan-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
-          >
-            <Video className="h-3.5 w-3.5" />
-            <span>Pencarian TikTok Shop</span>
-          </button>
+        {/* Shopee Connection Badge */}
+        <div className="flex items-center gap-2 px-3.5 py-2 bg-orange-950/60 rounded-xl border border-orange-700/60 text-xs font-semibold text-orange-300 shrink-0">
+          <ShoppingBag className="h-4 w-4 text-orange-400" />
+          <span>Pencarian Shopee Indonesia</span>
         </div>
       </div>
 
@@ -298,7 +305,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
             <span className="h-3 w-3 rounded-full bg-amber-500/80" />
             <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
             <span className="text-xs font-mono text-slate-400 ml-2">
-              {activePreview === 'shopee' ? 'Shopee Mobile App · v3.2 · Tab Pencarian' : 'TikTok Mobile App · v32.8 · Search & Shop Tab'}
+              Shopee Mobile App · v3.2 · Tab Pencarian & Feed Teratas
             </span>
           </div>
 
@@ -355,7 +362,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
         {/* Mock Search Bar */}
         <div className="relative mb-5">
           <div className="flex items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/90 px-3.5 py-2.5 shadow-sm">
-            <Search className={`h-4 w-4 ${activePreview === 'shopee' ? 'text-orange-400' : 'text-cyan-400'} shrink-0`} />
+            <Search className="h-4 w-4 text-orange-400 shrink-0" />
             <span className="text-xs sm:text-sm font-medium text-white flex-1 truncate">
               {simulation.searchQuery}
             </span>
@@ -366,7 +373,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
 
           {/* Quick Filter Tabs */}
           <div className="mt-2.5 flex items-center gap-2 overflow-x-auto text-[11px] font-medium text-slate-400">
-            <span className={`px-2.5 py-1 rounded-md font-semibold text-white ${activePreview === 'shopee' ? 'bg-orange-600/30 text-orange-300 border border-orange-500/40' : 'bg-cyan-600/30 text-cyan-300 border border-cyan-500/40'}`}>
+            <span className="px-2.5 py-1 rounded-md font-semibold text-orange-300 bg-orange-600/30 border border-orange-500/40">
               Paling Sesuai (#1)
             </span>
             <span className="px-2 py-1 rounded hover:text-slate-200">Terbaru</span>
@@ -376,200 +383,101 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
           </div>
         </div>
 
-        {/* THE TOP #1 SEARCH RESULT CARD */}
-        {activePreview === 'shopee' ? (
-          <div className="rounded-xl border-2 border-orange-500/60 bg-gradient-to-r from-orange-950/20 via-slate-900 to-slate-900 p-4 sm:p-5 relative overflow-hidden shadow-xl transition-all hover:border-orange-500">
-            {/* Top Rank Badge */}
-            <div className="absolute top-0 right-0 bg-gradient-to-l from-orange-600 to-rose-600 text-white text-[11px] font-extrabold px-3.5 py-1 rounded-bl-xl shadow flex items-center gap-1.5">
-              <Sparkles className="h-3 w-3 text-amber-200" />
-              <span>POSISI #1 PENCARIAN SHOPEE</span>
-            </div>
+        {/* THE TOP #1 SEARCH RESULT CARD (SHOPEE EXCLUSIVE) */}
+        <div className="rounded-xl border-2 border-orange-500/60 bg-gradient-to-r from-orange-950/20 via-slate-900 to-slate-900 p-4 sm:p-5 relative overflow-hidden shadow-xl transition-all hover:border-orange-500">
+          {/* Top Rank Badge */}
+          <div className="absolute top-0 right-0 bg-gradient-to-l from-orange-600 to-rose-600 text-white text-[11px] font-extrabold px-3.5 py-1 rounded-bl-xl shadow flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3 text-amber-200" />
+            <span>POSISI #1 PENCARIAN SHOPEE</span>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-              {/* Product Thumbnail Mock */}
-              <div className="md:col-span-3">
-                <div className="relative aspect-square w-full rounded-lg bg-slate-800 overflow-hidden border border-slate-700/80 flex items-center justify-center">
-                  <ShoppingBag className="h-16 w-16 text-orange-400/40" />
-                  <div className="absolute top-2 left-2 bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    Star+
-                  </div>
-                  <div className="absolute bottom-2 left-2 right-2 bg-slate-950/90 backdrop-blur-sm text-[10px] text-center font-mono text-emerald-400 py-0.5 rounded border border-emerald-500/30">
-                    Naikkan Produk Aktif
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+            {/* Product Thumbnail Mock */}
+            <div className="md:col-span-3">
+              <div className="relative aspect-square w-full rounded-lg bg-slate-800 overflow-hidden border border-slate-700/80 flex items-center justify-center">
+                <ShoppingBag className="h-16 w-16 text-orange-400/40" />
+                <div className="absolute top-2 left-2 bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  Star+
+                </div>
+                <div className="absolute bottom-2 left-2 right-2 bg-slate-950/90 backdrop-blur-sm text-[10px] text-center font-mono text-emerald-400 py-0.5 rounded border border-emerald-500/30">
+                  Naikkan Produk Aktif
                 </div>
               </div>
+            </div>
 
-              {/* Product Details */}
-              <div className="md:col-span-9 space-y-2.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="bg-gradient-to-r from-amber-500/25 to-orange-500/25 text-amber-300 border border-amber-500/50 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
-                    <Flame className="h-3 w-3 text-amber-400 fill-amber-400" />
-                    #1 TERLARIS DI SHOPEE
+            {/* Product Details */}
+            <div className="md:col-span-9 space-y-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-gradient-to-r from-amber-500/25 to-orange-500/25 text-amber-300 border border-amber-500/50 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                  <Flame className="h-3 w-3 text-amber-400 fill-amber-400" />
+                  #1 TERLARIS DI SHOPEE
+                </span>
+                <span className="bg-orange-500/20 text-orange-400 border border-orange-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  Official / Star+
+                </span>
+                <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  Cashback XTRA
+                </span>
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  Gratis Ongkir XTRA 0,-
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-[11px] px-2.5 py-1 rounded-lg">
+                <Users className="h-3.5 w-3.5 text-emerald-400 animate-pulse shrink-0" />
+                <span className="font-semibold">{simulation.liveBuyersViewing || 148} calon pembeli</span>
+                <span className="text-emerald-400/80">sedang melihat produk ini secara live</span>
+              </div>
+
+              <h3 className="text-sm sm:text-base font-bold text-white leading-snug">
+                {data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title || data.productName}
+              </h3>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] text-slate-400 font-medium">Kata Kunci Teratas:</span>
+                {data.highIntentKeywords?.slice(0, 4).map((kw, idx) => (
+                  <span key={idx} className="bg-slate-800/90 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-700/80 font-mono">
+                    #{kw.keyword}
                   </span>
-                  <span className="bg-orange-500/20 text-orange-400 border border-orange-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    Official / Star+
-                  </span>
-                  <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    Cashback XTRA
-                  </span>
-                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    Gratis Ongkir XTRA 0,-
-                  </span>
+                ))}
+              </div>
+
+              <div className="flex items-baseline gap-2 font-mono">
+                <span className="text-lg sm:text-xl font-extrabold text-orange-400 tabular-nums">
+                  {data.estimatedPriceRange.split('-')[0] || 'Rp 59.000'}
+                </span>
+                <span className="text-xs text-slate-500 line-through">
+                  Rp {(parseInt(data.estimatedPriceRange.replace(/[^0-9]/g, '').slice(0, 5) || '89000') * 1.5).toLocaleString('id-ID')}
+                </span>
+                <span className="text-xs font-bold text-rose-400 bg-rose-950/60 px-1 rounded">
+                  -35%
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 text-xs text-slate-400 pt-1 font-mono">
+                <div className="flex items-center text-amber-400 gap-1">
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  <span className="font-bold text-white">4.9</span>
+                  <span className="text-slate-500">(2.4k ulasan)</span>
                 </div>
+                <span>·</span>
+                <span className="text-slate-300 font-semibold">10.000+ Terjual</span>
+                <span>·</span>
+                <span className="text-slate-400">Kota Jakarta Barat</span>
+              </div>
 
-                <div className="flex items-center gap-2 bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-[11px] px-2.5 py-1 rounded-lg">
-                  <Users className="h-3.5 w-3.5 text-emerald-400 animate-pulse shrink-0" />
-                  <span className="font-semibold">{simulation.liveBuyersViewing || 148} calon pembeli</span>
-                  <span className="text-emerald-400/80">sedang melihat produk ini secara live</span>
-                </div>
-
-                <h3 className="text-sm sm:text-base font-bold text-white leading-snug">
-                  {data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title || data.productName}
-                </h3>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] text-slate-400 font-medium">Kata Kunci Teratas:</span>
-                  {data.highIntentKeywords?.slice(0, 4).map((kw, idx) => (
-                    <span key={idx} className="bg-slate-800/90 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-700/80 font-mono">
-                      #{kw.keyword}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-baseline gap-2 font-mono">
-                  <span className="text-lg sm:text-xl font-extrabold text-orange-400 tabular-nums">
-                    {data.estimatedPriceRange.split('-')[0] || 'Rp 59.000'}
-                  </span>
-                  <span className="text-xs text-slate-500 line-through">
-                    Rp {(parseInt(data.estimatedPriceRange.replace(/[^0-9]/g, '').slice(0, 5) || '89000') * 1.5).toLocaleString('id-ID')}
-                  </span>
-                  <span className="text-xs font-bold text-rose-400 bg-rose-950/60 px-1 rounded">
-                    -35%
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 text-xs text-slate-400 pt-1 font-mono">
-                  <div className="flex items-center text-amber-400 gap-1">
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">4.9</span>
-                    <span className="text-slate-500">(2.4k ulasan)</span>
-                  </div>
-                  <span>·</span>
-                  <span className="text-slate-300 font-semibold">10.000+ Terjual</span>
-                  <span>·</span>
-                  <span className="text-slate-400">Kota Jakarta Barat</span>
-                </div>
-
-                <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-[11px] text-slate-400">
-                  <span className="text-emerald-400 font-medium flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Turbo Bumping 15 Menit di Server Shopee
-                  </span>
-                  <span className="font-mono text-orange-400">
-                    Bumping Ulang: {formatCountdown(countdownSeconds)}
-                  </span>
-                </div>
+              <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-[11px] text-slate-400">
+                <span className="text-emerald-400 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Turbo Bumping 15 Menit di Server Shopee
+                </span>
+                <span className="font-mono text-orange-400">
+                  Bumping Ulang: {formatCountdown(countdownSeconds)}
+                </span>
               </div>
             </div>
           </div>
-        ) : (
-          /* TIKTOK SHOP RESULT CARD */
-          <div className="rounded-xl border-2 border-cyan-500/60 bg-gradient-to-r from-cyan-950/20 via-slate-900 to-slate-900 p-4 sm:p-5 relative overflow-hidden shadow-xl transition-all hover:border-cyan-500">
-            {/* Top Rank Badge */}
-            <div className="absolute top-0 right-0 bg-gradient-to-l from-cyan-600 to-blue-600 text-white text-[11px] font-extrabold px-3.5 py-1 rounded-bl-xl shadow flex items-center gap-1.5">
-              <Sparkles className="h-3 w-3 text-cyan-200" />
-              <span>REKOMENDASI TERATAS FYP TIKTOK SHOP</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-              {/* Product Thumbnail Mock with Video Overlay */}
-              <div className="md:col-span-3">
-                <div className="relative aspect-[3/4] w-full rounded-lg bg-slate-800 overflow-hidden border border-slate-700/80 flex items-center justify-center">
-                  <Video className="h-16 w-16 text-cyan-400/40" />
-                  <div className="absolute top-2 left-2 bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                    <span>LIVE</span>
-                  </div>
-                  <div className="absolute bottom-2 inset-x-2 bg-slate-950/90 backdrop-blur-sm text-[10px] text-center font-bold text-amber-400 py-1 rounded flex items-center justify-center gap-1">
-                    <ShoppingBag className="h-3 w-3" />
-                    <span>Keranjang Kuning #1</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Product Details */}
-              <div className="md:col-span-9 space-y-2.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="bg-gradient-to-r from-cyan-500/25 via-blue-500/25 to-rose-500/25 text-cyan-200 border border-cyan-500/50 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
-                    <Flame className="h-3 w-3 text-cyan-400 fill-cyan-400" />
-                    #1 PRODUK VIRAL TERLARIS TIKTOK SHOP
-                  </span>
-                  <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    TikTok Shop Mall
-                  </span>
-                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    Free Delivery Voucher
-                  </span>
-                  <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    Spill Bawa Untung
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 text-[11px] px-2.5 py-1 rounded-lg">
-                  <Users className="h-3.5 w-3.5 text-cyan-400 animate-pulse shrink-0" />
-                  <span className="font-semibold">{simulation.liveBuyersViewing || 148} pembeli TikTok</span>
-                  <span className="text-cyan-400/80">sedang melihat produk di Keranjang Kuning</span>
-                </div>
-
-                <h3 className="text-sm sm:text-base font-bold text-white leading-snug">
-                  {data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('tiktok'))?.title || data.productName}
-                </h3>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] text-slate-400 font-medium">Tag Pencarian FYP:</span>
-                  {data.highIntentKeywords?.slice(0, 4).map((kw, idx) => (
-                    <span key={idx} className="bg-slate-800/90 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-700/80 font-mono">
-                      #{kw.keyword}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-baseline gap-2 font-mono">
-                  <span className="text-lg sm:text-xl font-extrabold text-cyan-400 tabular-nums">
-                    {data.estimatedPriceRange.split('-')[0] || 'Rp 49.000'}
-                  </span>
-                  <span className="text-xs text-slate-500 line-through">
-                    Rp {(parseInt(data.estimatedPriceRange.replace(/[^0-9]/g, '').slice(0, 5) || '79000') * 1.4).toLocaleString('id-ID')}
-                  </span>
-                  <span className="text-xs font-bold text-rose-400 bg-rose-950/60 px-1 rounded">
-                    Diskon Live
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 text-xs text-slate-400 pt-1 font-mono">
-                  <div className="flex items-center text-amber-400 gap-1">
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">4.95</span>
-                    <span className="text-slate-500">(1.8k rating)</span>
-                  </div>
-                  <span>·</span>
-                  <span className="text-slate-300 font-semibold">12.5k Terjual</span>
-                  <span>·</span>
-                  <span className="text-cyan-400">98% Review Positif</span>
-                </div>
-
-                <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-[11px] text-slate-400">
-                  <span className="text-cyan-400 font-medium flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Sinyal Search FYP Ingestion Sukses
-                  </span>
-                  <span className="font-mono text-slate-400">
-                    Handshake: {simulation.handshakeId}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
 
         {/* Competitor cards below at lower ranks */}
         <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-2">
@@ -614,7 +522,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
             <div>
               <span className="text-slate-500 block">Gateway Node</span>
               <span className="text-slate-200 font-semibold truncate block">
-                {activePreview === 'shopee' ? 'Shopee SGW (Jakarta & SG Hub)' : 'TikTok TLB (IDN Edge Node)'}
+                Shopee SGW (Jakarta & SG Hub)
               </span>
             </div>
             <div>

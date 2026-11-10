@@ -12,10 +12,10 @@ interface LiveBoostPipelineModalProps {
 }
 
 const STAGES = [
-  { id: 1, label: 'Handshake Gateway Server', detail: 'Menghubungkan ke API Partner Shopee/TikTok...' },
+  { id: 1, label: 'Handshake Gateway Server', detail: 'Menghubungkan ke API Partner Shopee SGW Gateway...' },
   { id: 2, label: 'Injeksi Algoritma Search & Tagging', detail: 'Mengirimkan payload formula kata kunci ber-ranking tinggi...' },
-  { id: 3, label: 'Aktivasi Slot 15 Menit Sekali (Otomatis)', detail: 'Mendaftarkan item ke antrean auto-bumping 15 menit & showcase FYP...' },
-  { id: 4, label: 'Sinkronisasi Server Selesai', detail: 'Produk berhasil di-boost dan terdaftar di server platform.' },
+  { id: 3, label: 'Aktivasi Slot 15 Menit Sekali (Otomatis)', detail: 'Mendaftarkan item ke antrean auto-bumping 15 menit Shopee...' },
+  { id: 4, label: 'Sinkronisasi Server Selesai', detail: 'Produk berhasil di-boost dan terdaftar di server Shopee.' },
 ];
 
 export const LiveBoostPipelineModal: React.FC<LiveBoostPipelineModalProps> = ({
@@ -60,6 +60,7 @@ export const LiveBoostPipelineModal: React.FC<LiveBoostPipelineModalProps> = ({
             productId: data.productName,
             platform,
             autoSchedule,
+            productUrl: data.realServerConnection?.resolvedUrl || undefined,
           }),
         });
         const resData = await res.json();
@@ -109,9 +110,9 @@ export const LiveBoostPipelineModal: React.FC<LiveBoostPipelineModalProps> = ({
       <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-2">
-            <Zap className={`h-5 w-5 ${platform === 'shopee' ? 'text-orange-400' : 'text-cyan-400'}`} />
+            <Zap className="h-5 w-5 text-orange-400" />
             <h2 className="text-base sm:text-lg font-bold text-white">
-              Menghubungkan & Mem-boost ke Server {platform === 'shopee' ? 'Shopee' : 'TikTok'}
+              Menghubungkan & Mem-boost ke Server Shopee SGW
             </h2>
           </div>
           {isCompleted && (

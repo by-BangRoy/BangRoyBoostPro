@@ -50,12 +50,12 @@ export const Header: React.FC<HeaderProps> = ({
             Auto-Bumping 15M
           </button>
           <button
-            onClick={() => onSelectTab('tiktok-hooks')}
+            onClick={() => onSelectTab('shopee-live')}
             className={`whitespace-nowrap shrink-0 transition-colors ${
-              activeTab === 'tiktok-hooks' ? 'text-orange-400' : 'hover:text-white'
+              activeTab === 'shopee-live' ? 'text-orange-400' : 'hover:text-white'
             }`}
           >
-            TikTok Viral Hook
+            Shopee Live & Formula
           </button>
           <button
             onClick={() => onSelectTab('history')}
@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-500 whitespace-nowrap shrink-0 shadow-md"
           >
             <Zap className="h-3.5 w-3.5" />
-            <span>Mulai Boost</span>
+            <span>Mulai Boost Shopee</span>
           </button>
         </div>
       </div>

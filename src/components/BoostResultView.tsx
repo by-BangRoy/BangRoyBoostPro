@@ -26,7 +26,7 @@ import {
 import { BoostAnalysisData, PlatformType, OptimizedTitle } from '../types';
 import { safeCopy } from '../utils/clipboard';
 
-// Helper to synthesize randomized, high-intent structured formulas according to official Shopee & TikTok algorithm guidelines
+// Helper to synthesize randomized, high-intent structured formulas according to official Shopee SEO algorithm guidelines
 function buildRandomTitles(
   productName: string,
   category: string,
@@ -35,6 +35,7 @@ function buildRandomTitles(
   const cleanName = productName.replace(/^\[.*?\]\s*/, '').trim() || 'Produk Seller';
   const kw1 = (keywords[0] || cleanName).toLowerCase();
   const kw2 = (keywords[1] || `${cleanName} original`).toLowerCase();
+  const kw3 = (keywords[2] || `${cleanName} terlaris`).toLowerCase();
 
   const shopeeLabels = ['[OFFICIAL]', '[STAR+ SELLER]', '[ORIGINAL 100%]', '[MALL RESMI]', '[PROMO SPESIAL]', '[BEST SELLER #1]'];
   const shopeeUSPs = [
@@ -45,6 +46,7 @@ function buildRandomTitles(
     'Paling Laris Terbukti Bagus',
     'Finishing Rapi Bergaransi',
     'Anti Luntur Super Lembut',
+    'Original Bergaransi Resmi',
   ];
   const shopeePerks = [
     'Gratis Ongkir XTRA + Cashback XTRA + Bisa COD',
@@ -52,46 +54,19 @@ function buildRandomTitles(
     'Free Ongkir 0 Rupiah + Garansi Uang Kembali',
     'Pengiriman Cepat 24 Jam Bisa COD Seluruh Indonesia',
     'Diskon Terbatas Free Ongkir Seluruh Indonesia',
-  ];
-
-  const tiktokHooks = [
-    'Viral FYP!',
-    'Spill Racun TikTok!',
-    'Lagi Rame Banget!',
-    'Wajib Punya!',
-    'Beneran Senyaman Ini!',
-    'Solusi Praktis!',
-    'Kaget Banget Bagusnya!',
-  ];
-  const tiktokBenefits = [
-    'Look Mewah Harga Murah',
-    'Super Awet & Praktis',
-    'Bikin Tampil Beda Maksimal',
-    'Kualitas Original Terbukti',
-    'Paling Banyak Dicari Pembeli',
-    'Auto Bikin Pangling Elegan',
-  ];
-  const tiktokCTAs = [
-    '(Spesial Diskon Flash Sale Live)',
-    '(Promo Keranjang Kuning Kiri Bawah)',
-    '(Bisa COD & Voucher Gratis Ongkir)',
-    '(Amankan Selagi Promo Masih Aktif)',
-    '(Stok Terbatas Cek Etalase)',
+    'Extra Voucher Cashback + Siap Kirim Hari Ini',
   ];
 
   function pick<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  // Shopee Titles (Formatted for 100-120 chars)
+  // Shopee Titles (Formatted for 100-120 chars to maximize SEO score in search)
   const s1 = `${pick(shopeeLabels)} ${cleanName} ${pick(shopeeUSPs)} - ${pick(shopeePerks)}`.slice(0, 120);
   const s2 = `${kw1.toUpperCase()} ${cleanName} Model Terbaru - ${pick(shopeeUSPs)} + ${pick(shopeePerks)}`.slice(0, 120);
   const s3 = `Rekomendasi ${kw2} Pilihan Seller - ${cleanName} ${pick(shopeeUSPs)} Garansi 100%`.slice(0, 120);
-
-  // TikTok Titles (Formatted for 60-80 chars)
-  const t1 = `${pick(tiktokHooks)} ${cleanName} ${pick(tiktokBenefits)} ${pick(tiktokCTAs)}`.slice(0, 80);
-  const t2 = `${pick(tiktokHooks)} ${cleanName} Rekomendasi Terlaris ${pick(tiktokCTAs)}`.slice(0, 80);
-  const t3 = `Solusi ${cleanName} 100% Original ${pick(tiktokBenefits)} - Cek Keranjang Kuning`.slice(0, 80);
+  const s4 = `[PROMO LIVE] ${cleanName} ${kw3} Diskon Kilat Flash Sale - ${pick(shopeePerks)}`.slice(0, 120);
+  const s5 = `[BEST SELLER] ${cleanName} Asli 100% Original ${pick(shopeeUSPs)} - Bisa COD Free Ongkir`.slice(0, 120);
 
   return [
     {
@@ -100,14 +75,14 @@ function buildRandomTitles(
       charCount: s1.length,
       formula: 'Brand/Label + Kata Kunci Inti + Spesifikasi USP + Voucher Shopee',
       formulaType: 'official',
-      formulaBadge: 'Shopee SEO Official',
+      formulaBadge: 'Shopee Star+ Official',
       searchRelevanceScore: 99,
     },
     {
       platform: 'Shopee',
       title: s2,
       charCount: s2.length,
-      formula: 'High-Intent Keyword + Nama Produk + Fitur + Promo Xtra COD',
+      formula: 'High-Intent Keyword + Nama Produk + Fitur + Promo XTRA COD',
       formulaType: 'promo',
       formulaBadge: 'Shopee Promo Terlaris',
       searchRelevanceScore: 98,
@@ -119,34 +94,25 @@ function buildRandomTitles(
       formula: 'Search Discovery + Nama Produk + Keunggulan + Garansi Kepuasan',
       formulaType: 'high_intent',
       formulaBadge: 'Shopee Pencarian Tertarget',
-      searchRelevanceScore: 96,
+      searchRelevanceScore: 97,
     },
     {
-      platform: 'TikTok Shop',
-      title: t1,
-      charCount: t1.length,
-      formula: 'Viral Trigger + Nama Produk + Benefit Visual + Flash Sale Live',
-      formulaType: 'viral_fyp',
-      formulaBadge: 'TikTok FYP Viral',
+      platform: 'Shopee',
+      title: s4,
+      charCount: s4.length,
+      formula: 'Shopee Live / Flash Sale + Nama Produk + Diskon Kilat + Free Ongkir',
+      formulaType: 'flash_sale',
+      formulaBadge: 'Shopee Live & Flash Sale',
       searchRelevanceScore: 98,
     },
     {
-      platform: 'TikTok Shop',
-      title: t2,
-      charCount: t2.length,
-      formula: 'Spill Hook + Produk Terlaris + Value Proposition + CTA Keranjang',
-      formulaType: 'unboxing_spill',
-      formulaBadge: 'TikTok Racun Belanja',
+      platform: 'Shopee',
+      title: s5,
+      charCount: s5.length,
+      formula: 'Bestseller Badge + Kualitas Teruji + USP Kuat + COD Seluruh Indonesia',
+      formulaType: 'bestseller',
+      formulaBadge: 'Shopee Bestseller #1',
       searchRelevanceScore: 96,
-    },
-    {
-      platform: 'TikTok Shop',
-      title: t3,
-      charCount: t3.length,
-      formula: 'Problem Solver + Jaminan Original + Direct Keranjang Kuning',
-      formulaType: 'problem_solution',
-      formulaBadge: 'TikTok Konversi Cepat',
-      searchRelevanceScore: 95,
     },
   ];
 }
@@ -168,7 +134,7 @@ export const BoostResultView: React.FC<BoostResultViewProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [checklist, setChecklist] = useState(data.algorithmActionChecklist);
   const [isShuffling, setIsShuffling] = useState(false);
-  const [platformFilter, setPlatformFilter] = useState<'all' | 'shopee' | 'tiktok'>('all');
+  const [formulaFilter, setFormulaFilter] = useState<'all' | 'official' | 'promo' | 'live'>('all');
 
   const [titles, setTitles] = useState<OptimizedTitle[]>(() => {
     if (data.optimizedTitles && data.optimizedTitles.length >= 4) {
@@ -223,8 +189,9 @@ export const BoostResultView: React.FC<BoostResultViewProps> = ({
   };
 
   const filteredTitles = titles.filter((t) => {
-    if (platformFilter === 'shopee') return t.platform.toLowerCase().includes('shopee');
-    if (platformFilter === 'tiktok') return t.platform.toLowerCase().includes('tiktok');
+    if (formulaFilter === 'official') return t.formulaBadge?.toLowerCase().includes('official') || t.formulaBadge?.toLowerCase().includes('star');
+    if (formulaFilter === 'promo') return t.formulaBadge?.toLowerCase().includes('promo') || t.formulaBadge?.toLowerCase().includes('bestseller');
+    if (formulaFilter === 'live') return t.formulaBadge?.toLowerCase().includes('live') || t.formulaBadge?.toLowerCase().includes('flash');
     return true;
   });
 
@@ -243,19 +210,19 @@ export const BoostResultView: React.FC<BoostResultViewProps> = ({
   };
 
   const handleExportText = () => {
-    const content = `=== BANGROYBOOST BLUEPRINT HASIL ANALISIS ===
+    const content = `=== BANGROYBOOST BLUEPRINT OPTIMASI SHOPEE ===
 Produk: ${data.productName}
 Kategori: ${data.category}
-Platform: ${data.platform}
+Platform: Shopee (SGW Server Ingestion)
 Estimasi Harga: ${data.estimatedPriceRange}
 
---- JUDUL OPTIMASI SHOPEE & TIKTOK ---
-${data.optimizedTitles.map((t) => `[${t.platform}] (${t.charCount} Karakter)\n${t.title}\nFormula: ${t.formula}`).join('\n\n')}
+--- FORMULA JUDUL OPTIMASI SHOPEE (100-120 KARAKTER) ---
+${titles.map((t) => `[${t.formulaBadge || 'Shopee SEO'}] (${t.charCount} Karakter)\n${t.title}\nStruktur: ${t.formula}`).join('\n\n')}
 
---- KATA KUNCI REKOMENDASI (HIGH-INTENT) ---
+--- KATA KUNCI REKOMENDASI SHOPEE (HIGH-INTENT) ---
 ${data.highIntentKeywords.map((k) => `• ${k.keyword} | Volume: ${k.searchVolume} | Kompetisi: ${k.competition} | CPC: ${k.cpcEstimate}`).join('\n')}
 
---- SCRIPT VIDEO VIRAL TIKTOK SHOP ---
+--- SCRIPT SHOPEE LIVE & SHOPEE VIDEO ---
 ${data.viralTikTokScripts
   .map(
     (s, i) =>
@@ -290,17 +257,10 @@ ${data.recommendedHashtags.join(' ')}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 text-xs font-semibold">
-              {platform === 'shopee' ? (
-                <span className="flex items-center gap-1 text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
-                  <ShoppingBag className="h-3.5 w-3.5" />
-                  Shopee Server Ready
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                  <Video className="h-3.5 w-3.5" />
-                  TikTok Shop Cluster Ready
-                </span>
-              )}
+              <span className="flex items-center gap-1 text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                <ShoppingBag className="h-3.5 w-3.5" />
+                Shopee SGW Hub Connected
+              </span>
               <span className="text-slate-400">·</span>
               <span className="text-slate-300">{data.category}</span>
               <span className="text-slate-400">·</span>
@@ -312,13 +272,13 @@ ${data.recommendedHashtags.join(' ')}
             {dispatchedInfo ? (
               <div className="flex items-center gap-2 pt-1 text-xs font-mono text-emerald-400">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                <span>Terhubung ke Server: {dispatchedInfo.handshakeId}</span>
+                <span>Terhubung ke Server Shopee: {dispatchedInfo.handshakeId}</span>
                 <span>·</span>
                 <span>Next Boost: {dispatchedInfo.nextBoostAt}</span>
               </div>
             ) : (
               <p className="text-xs text-slate-400">
-                Analisis AI algoritma selesai. Klik tombol di kanan untuk memicu handshake & boosting ke server platform.
+                Analisis algoritma Shopee selesai. Klik tombol di kanan untuk memicu handshake & boosting ke server Shopee SGW.
               </p>
             )}
           </div>
@@ -427,7 +387,7 @@ ${data.recommendedHashtags.join(' ')}
           }`}
         >
           <Video className="h-3.5 w-3.5 text-rose-400" />
-          <span>Script Video FYP TikTok</span>
+          <span>Script Shopee Live & Video</span>
         </button>
 
         <button
@@ -463,10 +423,10 @@ ${data.recommendedHashtags.join(' ')}
             <div>
               <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-amber-400" />
-                <span>Formula Judul Rekomendasi Algoritma (Shopee & TikTok Shop)</span>
+                <span>Formula Judul Rekomendasi Algoritma Shopee</span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Formula judul tertata acak sesuai standar SEO Shopee (maks 120 kar) dan display card TikTok Shop (maks 80 kar).
+                Formula judul tertata acak sesuai standar SEO Shopee (maks 120 karakter) agar produk langsung muncul di halaman pertama pencarian.
               </p>
             </div>
 
@@ -483,33 +443,42 @@ ${data.recommendedHashtags.join(' ')}
             </div>
           </div>
 
-          {/* Platform Filter Tabs */}
+          {/* Formula Filter Tabs */}
           <div className="flex items-center gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800/80 w-fit text-xs overflow-x-auto">
             <button
-              onClick={() => setPlatformFilter('all')}
+              onClick={() => setFormulaFilter('all')}
               className={`px-3 py-1 rounded-lg font-semibold transition ${
-                platformFilter === 'all' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-white'
+                formulaFilter === 'all' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
               Semua ({titles.length})
             </button>
             <button
-              onClick={() => setPlatformFilter('shopee')}
+              onClick={() => setFormulaFilter('official')}
               className={`px-3 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 ${
-                platformFilter === 'shopee' ? 'bg-orange-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                formulaFilter === 'official' ? 'bg-orange-600 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
               <ShoppingBag className="h-3 w-3" />
-              <span>Shopee SEO (100-120 Karakter)</span>
+              <span>Shopee Star+ & Official</span>
             </button>
             <button
-              onClick={() => setPlatformFilter('tiktok')}
+              onClick={() => setFormulaFilter('promo')}
               className={`px-3 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 ${
-                platformFilter === 'tiktok' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                formulaFilter === 'promo' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Flame className="h-3 w-3" />
+              <span>Promo & Bestseller</span>
+            </button>
+            <button
+              onClick={() => setFormulaFilter('live')}
+              className={`px-3 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 ${
+                formulaFilter === 'live' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Video className="h-3 w-3" />
-              <span>TikTok Shop FYP (60-80 Karakter)</span>
+              <span>Live & Flash Sale</span>
             </button>
           </div>
 
@@ -522,19 +491,9 @@ ${data.recommendedHashtags.join(' ')}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wider font-mono px-2 py-0.5 rounded border ${
-                        t.platform.toLowerCase().includes('shopee')
-                          ? 'text-orange-400 bg-orange-500/10 border-orange-500/30'
-                          : 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30'
-                      }`}
-                    >
-                      {t.platform.toLowerCase().includes('shopee') ? (
-                        <ShoppingBag className="h-3 w-3" />
-                      ) : (
-                        <Video className="h-3 w-3" />
-                      )}
-                      {t.platform}
+                    <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider font-mono px-2 py-0.5 rounded border text-orange-400 bg-orange-500/10 border-orange-500/30">
+                      <ShoppingBag className="h-3 w-3" />
+                      SHOPEE SEO
                     </span>
                     <span className="text-xs font-bold text-amber-300 bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded flex items-center gap-1">
                       <Flame className="h-3 w-3 text-amber-400 fill-amber-400" />
@@ -548,16 +507,12 @@ ${data.recommendedHashtags.join(' ')}
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <span
                       className={`text-xs font-mono font-semibold px-2 py-0.5 rounded tabular-nums ${
-                        t.platform.toLowerCase().includes('shopee')
-                          ? t.charCount <= 120
-                            ? 'text-emerald-400 bg-emerald-950/50'
-                            : 'text-rose-400 bg-rose-950/50'
-                          : t.charCount <= 80
+                        t.charCount <= 120
                           ? 'text-emerald-400 bg-emerald-950/50'
                           : 'text-rose-400 bg-rose-950/50'
                       }`}
                     >
-                      {t.charCount} / {t.platform.toLowerCase().includes('shopee') ? 120 : 80} Karakter
+                      {t.charCount} / 120 Karakter
                     </span>
                   </div>
                 </div>
@@ -692,16 +647,17 @@ ${data.recommendedHashtags.join(' ')}
           </div>
 
           {/* Hashtag strip */}
+          {/* Hashtag strip */}
           <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2">
             <span className="text-xs font-semibold text-slate-300 block">
-              Hashtag Rekomendasi FYP & Shopee Haul:
+              Hashtag Rekomendasi Shopee Haul & Live Video:
             </span>
             <div className="flex flex-wrap gap-2">
               {data.recommendedHashtags.map((tag, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleCopy(tag, `tag-${idx}`)}
-                  className="rounded-md border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-cyan-400 hover:border-cyan-500/50 transition font-mono"
+                  className="rounded-md border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-orange-400 hover:border-orange-500/50 transition font-mono"
                 >
                   {copiedId === `tag-${idx}` ? 'Disalin!' : tag}
                 </button>
@@ -711,14 +667,14 @@ ${data.recommendedHashtags.join(' ')}
         </div>
       )}
 
-      {/* Tab 3: TikTok Viral Scripts */}
+      {/* Tab 3: Shopee Live & Shopee Video Scripts */}
       {activeSubTab === 'scripts' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-white">Script Video TikTok Shop FYP Generator</h3>
+              <h3 className="text-base font-bold text-white">Script Shopee Live & Video Generator</h3>
               <p className="text-xs text-slate-400">
-                Pola hook psikologis dengan retensi tinggi untuk menarik penonton checkout keranjang kuning.
+                Pola hook psikologis dengan retensi tinggi untuk menarik penonton checkout di etalase Shopee Live & Shopee Video.
               </p>
             </div>
           </div>
@@ -731,7 +687,7 @@ ${data.recommendedHashtags.join(' ')}
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                    <span className="text-xs font-bold text-rose-400">{script.angle}</span>
+                    <span className="text-xs font-bold text-orange-400">{script.angle}</span>
                     <span className="text-xs font-mono text-slate-400 tabular-nums">
                       {script.targetDuration}
                     </span>
@@ -746,20 +702,20 @@ ${data.recommendedHashtags.join(' ')}
 
                   <div>
                     <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
-                      Isi Script Video:
+                      Isi Script Video & Live:
                     </span>
                     <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">{script.body}</p>
                   </div>
 
                   <div>
                     <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider block">
-                      Call to Action (CTA Keranjang Kuning):
+                      Call to Action (CTA Etalase Shopee):
                     </span>
                     <p className="text-xs text-slate-200 mt-0.5">{script.callToAction}</p>
                   </div>
 
                   <div className="text-[11px] text-slate-400 font-mono">
-                    Audio Vibe: <span className="text-cyan-400">{script.recommendedAudioVibe}</span>
+                    Audio Vibe: <span className="text-orange-400">{script.recommendedAudioVibe}</span>
                   </div>
                 </div>
 
@@ -792,13 +748,13 @@ ${data.recommendedHashtags.join(' ')}
           <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-5 space-y-3">
             <div className="flex items-center gap-2 text-orange-400 font-bold text-sm">
               <Radio className="h-4 w-4" />
-              <span>Panduan Host Live Stream (Shopee Live / TikTok Live)</span>
+              <span>Panduan Host Shopee Live Stream & Diskon Kilat</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
               <div className="rounded-lg bg-slate-950/70 p-3 border border-slate-800/80">
                 <span className="text-xs font-semibold text-slate-400 block mb-1">
-                  Pin Etalase Strategy:
+                  Strategi Pin Etalase Shopee Live:
                 </span>
                 <p className="text-xs text-slate-200 leading-relaxed">
                   {data.liveSellingPitch.pinScript}
@@ -807,7 +763,7 @@ ${data.recommendedHashtags.join(' ')}
 
               <div className="rounded-lg bg-slate-950/70 p-3 border border-slate-800/80">
                 <span className="text-xs font-semibold text-slate-400 block mb-1">
-                  Voice Prompt Seruan Host:
+                  Voice Prompt Seruan Host Shopee Live:
                 </span>
                 <p className="text-xs text-slate-200 leading-relaxed italic">
                   "{data.liveSellingPitch.hostVoicePrompt}"
@@ -833,7 +789,7 @@ ${data.recommendedHashtags.join(' ')}
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Sistem BangRoyBoost secara berkala setiap <strong>15 menit sekali</strong> otomatis terkoneksi dan mengirimkan sinyal boost ke server Shopee dan TikTok Shop. Penjadwalan berulang ini menjaga produk Anda terus diprioritaskan di posisi teratas halaman pencarian tanpa henti.
+              Sistem BangRoyBoost secara berkala setiap <strong>15 menit sekali</strong> otomatis terkoneksi dan mengirimkan sinyal boost ke server Shopee SGW Gateway. Penjadwalan berulang ini menjaga produk Anda terus diprioritaskan di posisi teratas halaman pencarian pembeli tanpa jeda.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
@@ -858,9 +814,9 @@ ${data.recommendedHashtags.join(' ')}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-white">Checklist Kepatuhan Algoritma</h3>
+              <h3 className="text-base font-bold text-white">Checklist Kepatuhan Algoritma Shopee</h3>
               <p className="text-xs text-slate-400">
-                Centang setiap poin setelah diterapkan pada toko Shopee atau TikTok Shop Anda.
+                Centang setiap poin setelah diterapkan pada toko Shopee Seller Center Anda.
               </p>
             </div>
           </div>
@@ -900,42 +856,42 @@ ${data.recommendedHashtags.join(' ')}
         </div>
       )}
 
-      {/* Kolom Paling Bawah: Generator Formula Judul Acak Terlaris (Shopee & TikTok Direct) */}
+      {/* Kolom Paling Bawah: Generator Formula Judul Acak Terlaris (Rekomendasi Langsung Shopee) */}
       <div className="rounded-2xl border-2 border-orange-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-5 sm:p-6 shadow-2xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/90 pb-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-950/70 border border-amber-600/50 px-2 py-0.5 rounded">
                 <Flame className="h-3 w-3 text-amber-400 fill-amber-400" />
-                REKOMENDASI LANGSUNG SHOPEE & TIKTOK
+                REKOMENDASI LANGSUNG ALGORITMA SHOPEE
               </span>
               <span className="text-slate-500">·</span>
-              <span className="text-[11px] font-mono text-emerald-400">Siap Pasang di Seller Center</span>
+              <span className="text-[11px] font-mono text-emerald-400">Siap Pasang di Shopee Seller Center</span>
             </div>
             <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
               <Shuffle className="h-4 w-4 text-orange-400" />
-              <span>Formula Judul Acak Terlaris (Pencarian Tertarget Pembeli)</span>
+              <span>Formula Judul Acak Terlaris (Rekomendasi Algoritma Shopee)</span>
             </h3>
             <p className="text-xs text-slate-300 max-w-2xl">
-              Formula disusun acak dan dinamis namun tetap mengikuti struktur baku algoritma pencarian Shopee & TikTok agar produk langsung muncul di halaman pertama pencarian pembeli.
+              Formula disusun acak dan dinamis namun tetap mengikuti struktur baku algoritma pencarian Shopee (100-120 karakter) agar produk langsung muncul di halaman pertama pencarian pembeli.
             </p>
           </div>
 
           <button
             onClick={handleRandomizeAll}
             disabled={isShuffling}
-            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 via-rose-600 to-cyan-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition-all hover:brightness-110 disabled:opacity-50 shrink-0"
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 via-amber-600 to-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition-all hover:brightness-110 disabled:opacity-50 shrink-0"
           >
             <Shuffle className={`h-3.5 w-3.5 text-white ${isShuffling ? 'animate-spin' : ''}`} />
             <span>{isShuffling ? 'Mengacak...' : '🔀 Acak Formula Baru'}</span>
           </button>
         </div>
 
-        {/* 2 Featured Bottom Cards */}
+        {/* 2 Featured Bottom Cards (Both Shopee SEO Variations) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
-          {/* Shopee Featured Card */}
+          {/* Shopee Featured Card 1: Official & Star+ Seller Formula */}
           {(() => {
-            const shopeeTitle = titles.find((t) => t.platform.toLowerCase().includes('shopee')) || titles[0];
+            const shopeeTitle = titles[0] || titles.find((t) => t.formulaType === 'official') || titles[0];
             if (!shopeeTitle) return null;
             return (
               <div className="rounded-xl border border-orange-500/40 bg-orange-950/15 p-4 space-y-3">
@@ -943,10 +899,10 @@ ${data.recommendedHashtags.join(' ')}
                   <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1 text-xs font-bold font-mono text-orange-400 bg-orange-500/10 border border-orange-500/30 px-2 py-0.5 rounded">
                       <ShoppingBag className="h-3 w-3" />
-                      SHOPEE SEO
+                      SHOPEE STAR+ FORMULA
                     </span>
                     <span className="text-[11px] text-amber-300 font-bold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/60">
-                      {shopeeTitle.formulaBadge || 'Formula Terlaris'}
+                      {shopeeTitle.formulaBadge || 'Formula Star+'}
                     </span>
                   </div>
                   <span className="text-xs font-mono text-orange-300 tabular-nums font-semibold">
@@ -969,10 +925,10 @@ ${data.recommendedHashtags.join(' ')}
                     Mudah Ditemukan Pembeli di Shopee
                   </span>
                   <button
-                    onClick={() => handleCopy(shopeeTitle.title, 'bottom-shopee')}
+                    onClick={() => handleCopy(shopeeTitle.title, 'bottom-shopee-1')}
                     className="flex items-center gap-1.5 rounded-lg border border-orange-500/60 bg-orange-600/30 px-3 py-1.5 text-xs font-bold text-orange-200 transition hover:bg-orange-600 hover:text-white"
                   >
-                    {copiedId === 'bottom-shopee' ? (
+                    {copiedId === 'bottom-shopee-1' ? (
                       <>
                         <Check className="h-3.5 w-3.5 text-emerald-400" />
                         <span className="text-emerald-400">Disalin!</span>
@@ -980,7 +936,7 @@ ${data.recommendedHashtags.join(' ')}
                     ) : (
                       <>
                         <Copy className="h-3.5 w-3.5 text-orange-300" />
-                        <span>Salin Judul Shopee</span>
+                        <span>Salin Judul Star+</span>
                       </>
                     )}
                   </button>
@@ -989,54 +945,54 @@ ${data.recommendedHashtags.join(' ')}
             );
           })()}
 
-          {/* TikTok Shop Featured Card */}
+          {/* Shopee Featured Card 2: Promo XTRA & Flash Sale Formula */}
           {(() => {
-            const tiktokTitle = titles.find((t) => t.platform.toLowerCase().includes('tiktok')) || titles[1] || titles[0];
-            if (!tiktokTitle) return null;
+            const promoTitle = titles[1] || titles[3] || titles[titles.length - 1];
+            if (!promoTitle) return null;
             return (
-              <div className="rounded-xl border border-cyan-500/40 bg-cyan-950/15 p-4 space-y-3">
-                <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2">
+              <div className="rounded-xl border border-amber-500/40 bg-amber-950/15 p-4 space-y-3">
+                <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1 text-xs font-bold font-mono text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded">
-                      <Video className="h-3 w-3" />
-                      TIKTOK SHOP
+                    <span className="flex items-center gap-1 text-xs font-bold font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">
+                      <Flame className="h-3 w-3" />
+                      SHOPEE PROMO TERLARIS
                     </span>
-                    <span className="text-[11px] text-cyan-200 font-bold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60">
-                      {tiktokTitle.formulaBadge || 'Formula FYP'}
+                    <span className="text-[11px] text-amber-200 font-bold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/60">
+                      {promoTitle.formulaBadge || 'Formula Konversi'}
                     </span>
                   </div>
-                  <span className="text-xs font-mono text-cyan-300 tabular-nums font-semibold">
-                    {tiktokTitle.charCount} / 80 Karakter
+                  <span className="text-xs font-mono text-amber-300 tabular-nums font-semibold">
+                    {promoTitle.charCount} / 120 Karakter
                   </span>
                 </div>
 
                 <div className="text-[11px] text-slate-400 bg-slate-950/50 p-2 rounded border border-slate-800/80 font-mono">
                   <span className="text-slate-500 font-semibold">Struktur: </span>
-                  <span className="text-slate-300">{tiktokTitle.formula}</span>
+                  <span className="text-slate-300">{promoTitle.formula}</span>
                 </div>
 
-                <p className="text-xs sm:text-sm text-white font-medium bg-slate-950/90 p-3 rounded-lg border border-cyan-900/40 select-all font-mono leading-relaxed">
-                  {tiktokTitle.title}
+                <p className="text-xs sm:text-sm text-white font-medium bg-slate-950/90 p-3 rounded-lg border border-amber-900/40 select-all font-mono leading-relaxed">
+                  {promoTitle.title}
                 </p>
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[11px] text-cyan-400 flex items-center gap-1">
+                  <span className="text-[11px] text-amber-400 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
-                    Mudah Masuk FYP & Keranjang Kuning
+                    Meningkatkan CTR & Penjualan Cepat
                   </span>
                   <button
-                    onClick={() => handleCopy(tiktokTitle.title, 'bottom-tiktok')}
-                    className="flex items-center gap-1.5 rounded-lg border border-cyan-500/60 bg-cyan-600/30 px-3 py-1.5 text-xs font-bold text-cyan-200 transition hover:bg-cyan-600 hover:text-white"
+                    onClick={() => handleCopy(promoTitle.title, 'bottom-shopee-2')}
+                    className="flex items-center gap-1.5 rounded-lg border border-amber-500/60 bg-amber-600/30 px-3 py-1.5 text-xs font-bold text-amber-200 transition hover:bg-amber-600 hover:text-white"
                   >
-                    {copiedId === 'bottom-tiktok' ? (
+                    {copiedId === 'bottom-shopee-2' ? (
                       <>
                         <Check className="h-3.5 w-3.5 text-emerald-400" />
                         <span className="text-emerald-400">Disalin!</span>
                       </>
                     ) : (
                       <>
-                        <Copy className="h-3.5 w-3.5 text-cyan-300" />
-                        <span>Salin Judul TikTok</span>
+                        <Copy className="h-3.5 w-3.5 text-amber-300" />
+                        <span>Salin Judul Promo</span>
                       </>
                     )}
                   </button>
