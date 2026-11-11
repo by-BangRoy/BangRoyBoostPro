@@ -132,7 +132,7 @@ export const BoostResultView: React.FC<BoostResultViewProps> = ({
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'titles' | 'keywords' | 'scripts' | 'shopee' | 'checklist'>('titles');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [checklist, setChecklist] = useState(data.algorithmActionChecklist);
+  const [checklist, setChecklist] = useState(data.algorithmActionChecklist || []);
   const [isShuffling, setIsShuffling] = useState(false);
   const [formulaFilter, setFormulaFilter] = useState<'all' | 'official' | 'promo' | 'live'>('all');
 
@@ -158,6 +158,9 @@ export const BoostResultView: React.FC<BoostResultViewProps> = ({
           data.highIntentKeywords?.map((k) => k.keyword) || []
         )
       );
+    }
+    if (data.algorithmActionChecklist) {
+      setChecklist(data.algorithmActionChecklist);
     }
   }, [data]);
 

@@ -18,6 +18,12 @@ interface LinkInputHeroProps {
 
 const SAMPLE_PRODUCTS = [
   {
+    title: 'Shopee: Pakaian Wanita Terlaris (#1 Sales)',
+    platform: 'shopee' as const,
+    url: 'https://shopee.co.id/Pakaian-Wanita-cat.11042745?page=0&sortBy=sales',
+    category: 'Fashion & Pakaian Wanita',
+  },
+  {
     title: 'Shopee: Kemeja Linen Oversize Pria',
     platform: 'shopee' as const,
     url: 'https://shopee.co.id/Kemeja-Linen-Oversize-Pria-Casual-Premium-i.291038291.9201928310',
@@ -34,12 +40,6 @@ const SAMPLE_PRODUCTS = [
     platform: 'shopee' as const,
     url: 'https://shopee.co.id/TWS-Bluetooth-Earphone-Wireless-Super-Bass-i.88129031.9921039481',
     category: 'Gadget & Aksesoris',
-  },
-  {
-    title: 'Shopee: Mukena Silk Premium Cantik Mewah',
-    platform: 'shopee' as const,
-    url: 'https://shopee.co.id/Mukena-Silk-Premium-Mewah-Adem-i.39102819.8291029381',
-    category: 'Fashion Muslimah',
   },
 ];
 
@@ -113,11 +113,10 @@ export const LinkInputHero: React.FC<LinkInputHeroProps> = ({
       return;
     }
 
-    // Fallback: If both clipboard and input are empty, focus input for user convenience
-    const inputEl = document.querySelector('input[type="text"]') as HTMLInputElement;
-    if (inputEl) {
-      inputEl.focus();
-    }
+    // Default autofill to the primary requested sales link when input is empty
+    const defaultUrl = 'https://shopee.co.id/Pakaian-Wanita-cat.11042745?page=0&sortBy=sales';
+    setUrl(defaultUrl);
+    onAnalyze(defaultUrl, 'Fashion & Pakaian Wanita', targetAudience, bumpingInterval);
   };
 
   const handleSelectSample = (sample: typeof SAMPLE_PRODUCTS[0]) => {

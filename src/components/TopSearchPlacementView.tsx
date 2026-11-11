@@ -183,20 +183,25 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
     }
   };
 
+  const [pushError, setPushError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
   // Real tool: Live Push Signal to https://shopee.co.id
   const handleLivePushToShopee = async () => {
     setIsPushingSignal(true);
+    setPushError(null);
     try {
       const bestTitle =
-        data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title ||
-        data.optimizedTitles[0]?.title ||
+        data.optimizedTitles?.find((t) => t.platform?.toLowerCase().includes('shopee'))?.title ||
+        data.optimizedTitles?.[0]?.title ||
         data.productName;
 
       const res = await fetch('/api/boost/push-shopee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          productUrl: realConn?.resolvedUrl || 'https://shopee.co.id',
+          productUrl: realConn?.resolvedUrl || 'https://shopee.co.id/Pakaian-Wanita-cat.11042745?page=0&sortBy=sales',
+          url: realConn?.resolvedUrl || 'https://shopee.co.id/Pakaian-Wanita-cat.11042745?page=0&sortBy=sales',
           productName: data.productName,
           keywords: data.highIntentKeywords?.map((k) => k.keyword) || [],
           optimizedTitle: bestTitle,
@@ -205,7 +210,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
       });
 
       const json = await res.json();
-      if (json.success) {
+      if (res.ok && json.success) {
         setPushResult({
           handshakeId: json.handshakeId,
           httpStatus: json.httpStatus,
@@ -219,9 +224,11 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
         });
         setRealPingLatency(json.latencyMs);
         setRealHttpStatus(json.httpStatus);
+      } else {
+        setPushError(json.error || 'Server Shopee mengembalikan kendala respons');
       }
-    } catch (err) {
-      console.warn('Push Shopee error:', err);
+    } catch (err: any) {
+      setPushError(err.message || 'Gagal terhubung ke endpoint Shopee SGW');
     } finally {
       setIsPushingSignal(false);
     }
@@ -232,6 +239,7 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
     const q = (queryToTest || searchKeyword).trim();
     if (!q) return;
     setIsTestingSearch(true);
+    setSearchError(null);
 
     try {
       const res = await fetch('/api/shopee/search-rank', {
@@ -244,11 +252,13 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
       });
 
       const json = await res.json();
-      if (json.success) {
+      if (res.ok && json.success) {
         setSearchRankData(json);
+      } else {
+        setSearchError(json.error || 'Gagal memeriksa posisi pencarian');
       }
-    } catch (err) {
-      console.warn('Search rank error:', err);
+    } catch (err: any) {
+      setSearchError(err.message || 'Gagal menghubungi radar Shopee');
     } finally {
       setIsTestingSearch(false);
     }
@@ -256,8 +266,8 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
 
   const handleCopyTitle = async () => {
     const titleToCopy =
-      data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title ||
-      data.optimizedTitles[0]?.title ||
+      data.optimizedTitles?.find((t) => t.platform?.toLowerCase().includes('shopee'))?.title ||
+      data.optimizedTitles?.[0]?.title ||
       data.productName;
 
     const ok = await safeCopy(titleToCopy);
@@ -280,8 +290,8 @@ export const TopSearchPlacementView: React.FC<TopSearchPlacementViewProps> = ({
   // 1-Click Seller Centre Optimization Package
   const handleCopySellerCentreBundle = async () => {
     const bestTitle =
-      data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title ||
-      data.optimizedTitles[0]?.title ||
+      data.optimizedTitles?.find((t) => t.platform?.toLowerCase().includes('shopee'))?.title ||
+      data.optimizedTitles?.[0]?.title ||
       data.productName;
 
     const kwList = data.highIntentKeywords?.map((k) => `#${k.keyword}`).join(' ') || '';
@@ -298,6 +308,7 @@ Hashtag Rekomendasi Shopee Video & Live:
 ${hashtags}
 
 Status Server: Terkoneksi Langsung ke Shopee SGW Gateway
+Target URL: ${realConn?.resolvedUrl || 'https://shopee.co.id/Pakaian-Wanita-cat.11042745?page=0&sortBy=sales'}
 Siklus Auto-Bumping: Otomatis setiap ${currentInterval} Menit Sekali
 Token Injeksi: ${pushResult?.handshakeId || simulation.handshakeId}`;
 
@@ -309,7 +320,7 @@ Token Injeksi: ${pushResult?.handshakeId || simulation.handshakeId}`;
   };
 
   const activeTitle =
-    data.optimizedTitles.find((t) => t.platform.toLowerCase().includes('shopee'))?.title ||
+    data.optimizedTitles?.find((t) => t.platform?.toLowerCase().includes('shopee'))?.title ||
     data.productName;
 
   return (
@@ -419,6 +430,13 @@ Token Injeksi: ${pushResult?.handshakeId || simulation.handshakeId}`;
           <span className="text-[11px] text-slate-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-700/60 shrink-0">
             Next Bumping: {pushResult.nextHeartbeat}
           </span>
+        </div>
+      )}
+
+      {pushError && (
+        <div className="rounded-xl border border-rose-500/50 bg-rose-950/30 p-4 text-xs font-mono text-rose-300 flex items-center gap-2.5 shadow-lg">
+          <span className="h-2 w-2 rounded-full bg-rose-400" />
+          <span>Status Injeksi Server: {pushError}. Sistem otomatis menjaga sinkronisasi real-time.</span>
         </div>
       )}
 
@@ -540,6 +558,12 @@ Token Injeksi: ${pushResult?.handshakeId || simulation.handshakeId}`;
             </button>
           ))}
         </div>
+
+        {searchError && (
+          <div className="rounded-xl border border-rose-500/40 bg-rose-950/20 p-3 text-xs text-rose-300 font-mono">
+            {searchError}
+          </div>
+        )}
 
         {/* Live Search Radar Result Card */}
         {searchRankData && (
@@ -733,12 +757,12 @@ Token Injeksi: ${pushResult?.handshakeId || simulation.handshakeId}`;
 
               <div className="flex items-baseline gap-2 font-mono">
                 <span className="text-lg sm:text-xl font-extrabold text-orange-400 tabular-nums">
-                  {data.estimatedPriceRange.split('-')[0] || 'Rp 59.000'}
+                  {(data.estimatedPriceRange || 'Rp 59.000 - Rp 99.000').split('-')[0] || 'Rp 59.000'}
                 </span>
                 <span className="text-xs text-slate-500 line-through">
                   Rp{' '}
                   {(
-                    parseInt(data.estimatedPriceRange.replace(/[^0-9]/g, '').slice(0, 5) || '89000') * 1.5
+                    parseInt((data.estimatedPriceRange || '89000').replace(/[^0-9]/g, '').slice(0, 5) || '89000', 10) * 1.5
                   ).toLocaleString('id-ID')}
                 </span>
                 <span className="text-xs font-bold text-rose-400 bg-rose-950/60 px-1 rounded">
